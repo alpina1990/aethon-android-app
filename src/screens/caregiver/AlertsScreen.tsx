@@ -63,7 +63,7 @@ export default function AlertsScreen() {
             alerts.map(alert => (
               <View key={alert.id} style={styles.alertCard}>
                 <View style={styles.alertHeader}>
-                  <Text style={styles.alertType}>{alert.severity} Priority</Text>
+                  <Text style={styles.alertType}>ESCALATION</Text>
                   <Text style={styles.alertTime}>
                     {new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
@@ -73,7 +73,7 @@ export default function AlertsScreen() {
                   {alert.residents?.first_name} {alert.residents?.last_name} 
                   {alert.residents?.room_number ? ` (Rm ${alert.residents.room_number})` : ''}
                 </Text>
-                <Text style={styles.alertMessage}>{alert.description}</Text>
+                <Text style={styles.alertMessage}>{alert.reason}</Text>
                 
                 <TouchableOpacity style={styles.dismissBtn} onPress={() => dismissAlert(alert.id)}>
                   <Feather name="check" size={16} color="#0f172a" />

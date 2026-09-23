@@ -66,12 +66,16 @@ export default function EscalationScreen() {
     try {
       const { data: userData } = await supabase.auth.getUser();
       
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('facility_id')
+        .eq('id', userData.user?.id)
+        .single();
+
       const { error } = await supabase.from('escalations').insert({
         resident_id: selectedResidentId,
-        facility_id: null, // RLS handles this typically or we fetch it
-        reported_by: userData.user?.id,
-        severity: selectedPriority,
-        description: `${selectedReason}${details ? ' - ' + details : ''}`,
+        facility_id: profile?.facility_id,
+        reason: `${selectedPriority.toUpperCase()} Priority: ${selectedReason}${details ? ' - ' + details : ''}`,
         is_resolved: false
       });
 

@@ -1,1 +1,2 @@
 @AGENTS.md
+@docs/AETHON_RULES.md

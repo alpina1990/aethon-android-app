@@ -14,6 +14,7 @@ export type RootStackParamList = {
   LogNote: undefined;
   Escalation: undefined;
   ScanQR: undefined;
+  ClientProfile: { clientId: string; clientName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,6 +30,7 @@ export function RootNavigator() {
         <Stack.Screen name="LogNote" component={require('../screens/caregiver/LogNoteScreen').default} options={{ presentation: 'modal' }} />
         <Stack.Screen name="Escalation" component={require('../screens/caregiver/EscalationScreen').default} options={{ presentation: 'modal' }} />
         <Stack.Screen name="ScanQR" component={require('../screens/caregiver/ScanQRScreen').default} options={{ presentation: 'modal' }} />
+        <Stack.Screen name="ClientProfile" component={require('../screens/caregiver/ClientProfileScreen').default} />
       </Stack.Navigator>
     </NavigationContainer>
   );

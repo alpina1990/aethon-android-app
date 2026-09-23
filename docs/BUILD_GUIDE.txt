@@ -1,0 +1,3026 @@
+Aethon - Build Guide​                                                                                                              v1.0
+
+AETHON
+Build Guide
+Minimum viable product - iOS and web
+
+ Product                    A platform that extends how long people can live independently, and supports the family members,
+                            carers and facilities who assist them.
+
+ Deliverable                A working iOS application distributed via TestFlight, plus a web application for family and facility
+                            users.
+
+ Platform                   React Native (bare workflow), Supabase, Next.js
+
+ Total effort               Approximately 82 hours across 47 build increments
+
+ Increment size             2 to 4 hours each. Every increment leaves the application in a working, installable state.
+
+ Reader                     A developer or technical founder using an AI coding assistant. Every command and prompt is
+                            written out in full.
+
+Chapters 2 and 3 build the foundation. Chapters 4 to 10 are feature bundles and may be reordered where their prerequisites
+allow. Chapter 11 covers release. Appendix A is an optional parallel track.
+
+                                                                1
+Aethon - Build Guide​                                                                                                                                                           v1.0
+
+Contents
+Product Direction and Scope...............................................................................................................................................3
+   1.1 What Aethon does.................................................................................................................................................... 3
+       Objective one - independence.................................................................................................................................... 3
+       Objective two - the people providing care..................................................................................................................3
+   1.2 The three stages........................................................................................................................................................ 3
+   1.3 Scope of this build..................................................................................................................................................... 3
+   1.4 Design constraints..................................................................................................................................................... 4
+   1.5 Technology................................................................................................................................................................ 4
+Development Environment................................................................................................................................................. 5
+   2.1 Accounts and costs....................................................................................................................................................5
+   2.2 Apple Developer Program......................................................................................................................................... 5
+   2.3 Xcode and command line tools................................................................................................................................. 5
+   2.4 Editor and coding assistant........................................................................................................................................6
+   2.5 Supabase project.......................................................................................................................................................6
+Foundation.......................................................................................................................................................................... 8
+   3.1 Create the project..................................................................................................................................................... 8
+   3.2 Project structure and design tokens..........................................................................................................................8
+   3.3 Signing and capabilities............................................................................................................................................. 9
+   3.4 Database schema.................................................................................................................................................... 10
+   3.5 Authentication and role routing..............................................................................................................................10
+   3.6 First TestFlight build.................................................................................................................................................12
+The Resident Record......................................................................................................................................................... 13
+   4.1 Client list..................................................................................................................................................................13
+   4.2 Client profile............................................................................................................................................................13
+   4.3 Independence baseline........................................................................................................................................... 14
+   4.4 Care stage and transitions....................................................................................................................................... 15
+Carer Field Tools................................................................................................................................................................ 17
+   5.1 Voice capture...........................................................................................................................................................17
+   5.2 On-device transcription...........................................................................................................................................18
+   5.3 Note review............................................................................................................................................................. 20
+   5.4 Structured visit log.................................................................................................................................................. 21
+Observation and Forecasting............................................................................................................................................ 22
+   6.1 Health observations................................................................................................................................................ 22
+   6.2 Trend display........................................................................................................................................................... 23
+   6.3 Follow-up prompts.................................................................................................................................................. 23
+Escalation and Handover...................................................................................................................................................25
+   7.1 Physician escalation.................................................................................................................................................25
+   7.2 Escalation outcome................................................................................................................................................. 26
+   7.3 Shift handover......................................................................................................................................................... 26
+Family Access.................................................................................................................................................................... 28
+   8.1 Web application setup.............................................................................................................................................28
+
+                                                                                          2
+Aethon - Build Guide​                                                                                                                                                             v1.0
+
+   8.2 Family dashboard.................................................................................................................................................... 29
+   8.3 Messaging............................................................................................................................................................... 30
+   8.4 Deployment.............................................................................................................................................................30
+Facility Overview............................................................................................................................................................... 32
+   9.1 Overview dashboard............................................................................................................................................... 32
+   9.2 Live updates............................................................................................................................................................ 32
+Resident Application......................................................................................................................................................... 34
+   10.1 Resident onboarding............................................................................................................................................. 34
+   10.2 Independence goals.............................................................................................................................................. 35
+   10.3 Daily summary.......................................................................................................................................................35
+   10.4 Medication reminders........................................................................................................................................... 36
+   10.5 Assistance request.................................................................................................................................................38
+Release.............................................................................................................................................................................. 40
+   11.1 Loading, error and empty states........................................................................................................................... 40
+   11.2 Accessibility pass................................................................................................................................................... 40
+   11.3 TestFlight distribution............................................................................................................................................41
+   11.4 Demonstration...................................................................................................................................................... 41
+Beyond the Minimum Viable Product............................................................................................................................... 43
+   12.1 Direction................................................................................................................................................................43
+   12.2 Next increments.................................................................................................................................................... 43
+   12.3 Deliberately unresolved........................................................................................................................................ 44
+Compliance Track (Optional)............................................................................................................................................. 45
+   A.1 When this becomes required..................................................................................................................................45
+   A.2 Statement of intended purpose..............................................................................................................................45
+   A.3 Data protection assessment....................................................................................................................................45
+   A.4 Review by a qualified person.................................................................................................................................. 46
+   A.5 Second review before instrumentation...................................................................................................................46
+Database Schema..............................................................................................................................................................48
+   B.1 Production policies..................................................................................................................................................50
+Effort and Cost Summary.................................................................................................................................................. 51
+   C.1 Effort by chapter......................................................................................................................................................51
+   C.2 Recurring cost..........................................................................................................................................................51
+   C.3 Optional additional cost.......................................................................................................................................... 51
+
+                                                                                           3
+Aethon - Build Guide​                                                                                                               v1.0
+
+CHAPTER 1
+
+Product Direction and Scope
+
+1.1 What Aethon does
+Aethon is a record and coordination platform built around a single person and the people who help them stay at
+home. It follows that person across the stages of care they move through, and keeps one continuous record rather
+than a series of disconnected ones.
+
+The product pursues two objectives at once.
+
+Objective one - independence
+  •​ Extend the period during which a person can live independently at home.
+  •​ Recognise early when that period is coming to an end, so support can be arranged before a crisis forces the
+     decision.
+  •​ Carry the record through the transition, so that moving to supported or residential care does not mean starting
+     again from a blank page.
+
+Objective two - the people providing care
+  •​ Reduce the documentation burden on professional carers, so time goes to the person rather than to paperwork.
+  •​ Give family members a reliable view of how their relative is doing, without telephoning the organisation.
+  •​ Give a facility or home care service a live operational picture of who has been seen and what needs attention.
+
+1.2 The three stages
+A person typically passes through three stages. Most software serves exactly one of them, which is why records are
+lost at every boundary. Aethon is designed so that the same record persists across all three.
+
+ Stage                  Situation                                                    Who uses the product
+
+ A - Independent        Living at home, assisted informally by family.               The person themselves, and family members.
+
+ B - Supported          Living at home with a professional home care service         Adds the visiting carer and the service
+                        visiting.                                                    coordinator.
+
+ C - Residential        Living in a care facility.                                   Adds facility staff and management.
+
+The record is the product. A person entering stage C arrives with a documented history of their medications, their
+observed condition over time, their stated priorities and their care transitions. That continuity is the thing no
+single-stage product can offer.
+
+1.3 Scope of this build
+This document specifies the minimum viable product. It covers stages A and B fully and lays the foundation for stage C.
+The intent is a working system that a real home care service can use, not a demonstration.
+
+ In scope                                                                Deliberately excluded
+
+ Resident record with independence baseline and care stage               Any form of automated clinical assessment, risk score or
+ history                                                                 recommendation
+
+ Voice-captured visit notes transcribed on the device                    Fall detection or any sensor-based monitoring
+
+                                                                    4
+Aethon - Build Guide​                                                                                                              v1.0
+
+ In scope                                                             Deliberately excluded
+
+ Structured visit logging and health observation                      Integration with external electronic health record systems
+
+ Physician escalation with outcome tracking                           Medication administration recording
+
+ Automatically assembled shift handover                               Billing, rostering and payroll
+
+ Family web portal with messaging                                     Native Android application
+
+ Facility overview dashboard                                          Multi-tenant organisation management
+
+ Resident application with reminders and assistance request           Peer comparison or population analytics
+
+The exclusions are not oversights. Each one either requires a partner, a regulatory position, or a volume of users that
+does not yet exist. Chapter 12 sets out what each would need.
+
+1.4 Design constraints
+Four constraints apply throughout and are enforced in the build instructions rather than left to judgement.
+
+ Constraint                       Rule
+
+ Display, do not evaluate         The software presents observations and trends. It does not combine inputs to reach conclusions,
+                                  does not apply thresholds that change what the user sees, and does not recommend action. If an
+                                  instruction requires a comparison against a threshold to decide what to display, that instruction
+                                  is wrong.
+
+ Data stays close                 Voice audio is transcribed on the device and deleted immediately. Stored data resides in the
+                                  European Union. No third-party processor handles health information in this build.
+
+ Accessibility for older users    On any screen a resident sees: minimum 22pt text, minimum 80px tap targets, no swipe
+                                  gestures, no hidden navigation, nothing that disappears on a timer.
+
+ Every increment ships            Each increment in this document leaves the application installable and working. There is no state
+                                  in which the build is half-finished for more than one working session.
+
+1.5 Technology
+ Layer                   Choice                                 Reason
+
+ Mobile                  React Native, bare workflow            Full access to native audio and on-device inference. Distributed
+                                                                through TestFlight as a real installable application.
+
+ Speech                  whisper.rn (whisper.cpp binding)       Runs on the device. No audio transmitted, no per-minute cost,
+                                                                works without a network connection.
+
+ Backend                 Supabase - Postgres, Auth, Realtime,   Managed Postgres with row level security, real-time subscriptions,
+                         Storage                                and EU hosting in Frankfurt.
+
+ Web                     Next.js on Vercel                      Family and facility users reach the product in a browser with no
+                                                                installation.
+
+ Notifications           Notifee with Firebase Cloud            Scheduled local reminders and remote push through a single
+                         Messaging                              interface.
+
+ Documents               react-native-html-to-pdf               Handover export without a server round trip.
+
+                                                                  5
+Aethon - Build Guide​                                                                                                       v1.0
+
+CHAPTER 2
+
+Development Environment
+
+This chapter prepares the machine and the accounts. Nothing here produces application code, but every later chapter
+depends on it. Allow one working day, most of which is unattended downloading and waiting for approval.
+
+2.1 Accounts and costs
+ Service                            Purpose                                Cost                        Lead time
+
+ Apple Developer Program            Signing and TestFlight distribution    USD 99 per year             Up to 48 hours for
+                                                                                                       approval
+
+ Supabase                           Database, authentication, storage      Free tier is sufficient     Immediate
+
+ Firebase                           Push notification delivery             Free                        Immediate
+
+ Vercel                             Web application hosting                Free tier is sufficient     Immediate
+
+ Apple ID                           Required for the developer programme   Free                        Immediate
+
+Total recurring cost for the entire build is USD 99 per year. Speech transcription runs on the device, so there is no
+per-minute charge. Every other service used in this specification has a free tier adequate for a pilot of this size.
+
+2.2 Apple Developer Program
+ Prerequisites          An Apple ID and a payment card                      Time                       Cost
+                                                                            30 minutes active, up to   USD 99 / year
+                                                                            48 hours waiting
+
+Start this before anything else, because approval can take two days and the rest of the environment work runs in
+parallel with the wait.
+
+  1.​ Open developer.apple.com, select Account, and sign in with your Apple ID.
+  2.​ Select Join the Apple Developer Program, then Enrol. Choose Individual rather than Organisation.
+  3.​ Complete identity verification and pay the annual fee. Wait for the confirmation email.
+  4.​ Once approved, open Identifiers, select the plus button, choose App IDs, then App.
+  5.​ Set the description to Aethon and the Bundle ID to an explicit identifier such as com.aethon.app. Enable the Push
+      Notifications capability.
+  6.​ Connect your iPhone to the Mac. Open Finder, select the phone in the sidebar, and click the storage line
+      repeatedly until the UDID appears. Copy it.
+  7.​ Open Devices, select the plus button, choose iOS, name the device, and paste the UDID.
+
+2.3 Xcode and command line tools
+ Prerequisites          macOS 13 or later                                   Time                       Cost
+                                                                            2 to 3 hours, mostly       Free
+                                                                            unattended
+
+Install Xcode
+  8.​ Open the App Store, search for Xcode, and install it. The download is approximately 14 GB.
+  9.​ Open Xcode once it has installed and accept any additional component installation it offers.
+  10.​      Open Xcode, then Settings, then the Locations tab. Set Command Line Tools to the installed version.
+
+                                                                    6
+Aethon - Build Guide​                                                                                                     v1.0
+
+Install the toolchain
+Open Terminal by pressing Command and Space, typing Terminal, and pressing Enter. Run each block below in order,
+waiting for each to complete.
+
+  Terminal
+  # Homebrew - the package manager everything else installs through
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  # Node.js 20
+  brew install node@20
+  echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+  source ~/.zshrc
+
+  # Watchman - file watcher used by the React Native bundler
+  brew install watchman
+
+  # CocoaPods - iOS dependency manager
+  sudo gem install cocoapods
+
+  # Verify
+  node --version # expect v20.x
+  pod --version # expect 1.15.x or later
+  xcodebuild -version # expect Xcode 15.x or later
+
+2.4 Editor and coding assistant
+ Prerequisites          None                                                  Time                    Cost
+                                                                              20 minutes              Free with an existing
+                                                                                                      subscription
+
+  11.​       Download Visual Studio Code from code.visualstudio.com and move it to the Applications folder.
+  12.​       Open the Extensions panel from the left sidebar.
+  13.​       Install: Claude by Anthropic, ESLint by Microsoft, Prettier, and React Native Tools by Microsoft.
+  14.​    Select the Claude icon in the sidebar and sign in. This is the assistant that consumes the prompts in this
+     document.
+
+Every block in this specification marked CLAUDE CODE PROMPT is intended to be pasted into that panel verbatim. The
+prompts are written to be self-contained.
+
+2.5 Supabase project
+ Prerequisites          None                                                  Time                    Cost
+                                                                              30 minutes              Free
+
+  15.​       Open supabase.com and create an account.
+  16.​       Select New project. Name it aethon.
+  17.​       Generate a database password and store it somewhere durable. It cannot be recovered later.
+  18.​       Set the region to Frankfurt (eu-central-1). This places all stored data in the European Union.
+  19.​       Wait approximately two minutes for provisioning.
+  20.​       Open Settings, then API. Copy the Project URL and the anon public key. Both are needed in chapter 3.
+  21.​    Open Authentication, then Settings. Disable email confirmation for the development build. Confirm that
+     Magic Link sign-in is enabled.
+  22.​     Open Authentication, then Email Templates, then Magic Link. Set the subject line to a recognisable phrase
+     such as: Your Aethon sign-in link.
+  23.​       Open Storage and create a public bucket named media. This holds family photographs.
+
+                                                                7
+Aethon - Build Guide​                                                                            v1.0
+
+Done when
+  •​ node --version, pod --version and xcodebuild -version all return expected values
+  •​ The Apple Developer account is approved and an App ID exists
+  •​ Your test device UDID is registered
+  •​ Visual Studio Code is installed with the Claude extension signed in
+  •​ A Supabase project exists in the Frankfurt region and you have saved the URL and anon key
+
+                                                             8
+Aethon - Build Guide​                                                                                               v1.0
+
+CHAPTER 3
+
+Foundation
+
+Six increments that produce a signed, installable application with a working database and authentication. At the end of
+this chapter the application does nothing useful, but everything after it is feature work.
+
+3.1 Create the project
+ Prerequisites          Chapter 2 complete                                   Time                 Cost
+                                                                             2 hours              None
+Creates the React Native project and installs the dependencies used across the whole build. Installing them once now
+avoids repeated native rebuilds later.
+
+  Terminal
+  cd ~/Documents
+  npx react-native@latest init Aethon --template react-native-template-typescript
+  cd Aethon
+
+  # Data and storage
+  npm install @supabase/supabase-js
+  npm install @react-native-async-storage/async-storage
+  npm install react-native-fs
+
+  # Navigation
+  npm install @react-navigation/native @react-navigation/stack
+  npm install react-native-screens react-native-safe-area-context
+  npm install react-native-gesture-handler
+
+  # Audio capture and on-device transcription
+  npm install react-native-audio-recorder-player
+  npm install whisper.rn
+
+  # Notifications
+  npm install @notifee/react-native
+  npm install @react-native-firebase/app @react-native-firebase/messaging
+
+  # Documents and sharing
+  npm install react-native-html-to-pdf react-native-share
+
+  # Link the native iOS side
+  cd ios && pod install && cd ..
+
+  # Open the project in the editor
+  code .
+
+Done when
+  •​ The Aethon directory exists and opens in Visual Studio Code
+  •​ pod install completed without error
+  •​ npx react-native run-ios launches the simulator and shows the default screen
+
+3.2 Project structure and design tokens
+ Prerequisites          3.1 complete                                         Time                 Cost
+                                                                             1 hour               None
+Establishes the directory layout and the single source of truth for colour, type and spacing. Defining these now keeps
+every later prompt short and consistent.
+
+  CLAUDE CODE PROMPT 3.2 - structure and tokens
+
+  Create this directory structure under src, with an index.ts placeholder in each:
+
+   src/screens/auth
+   src/screens/carer
+
+                                                             9
+Aethon - Build Guide​                                                                                         v1.0
+
+   src/screens/resident
+   src/screens/onboarding
+   src/screens/shared
+   src/components
+   src/lib
+   src/hooks
+   src/navigation
+   src/constants
+
+  Create src/constants/theme.ts with exactly this content:
+
+  export const COLORS = {
+   primary: '#1D9E75',
+   primaryDark: '#085041',
+   primaryLight: '#E1F5EE',
+   blue: '#185FA5',
+   blueLight: '#E6F1FB',
+   amber: '#BA7517',
+   amberLight: '#FAEEDA',
+   danger: '#A32D2D',
+   dangerLight: '#FCEBEB',
+   surface: '#FFFFFF',
+   surfaceAlt: '#F5F5F5',
+   text: '#1A1A1A',
+   textSecond: '#444444',
+   textMuted: '#888888',
+   border: '#CCCCCC',
+  }
+
+  export const TYPE = {
+   // Standard scale, used on carer and family screens
+   h1: 28, h2: 22, h3: 18, body: 17, small: 15, caption: 13,
+   // Resident scale. No resident-facing text may fall below residentMin.
+   residentH1: 36, residentH2: 26, residentBody: 22, residentMin: 22,
+  }
+
+  export const TOUCH = {
+   standard: 52, // minimum tap target on carer and family screens
+   resident: 80, // minimum tap target on any resident-facing screen
+  }
+
+  export const RADIUS = { sm: 6, md: 10, lg: 14, pill: 999 }
+  export const SPACE = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 }
+
+  Create src/lib/supabase.ts:
+
+  import { createClient } from '@supabase/supabase-js'
+  import AsyncStorage from '@react-native-async-storage/async-storage'
+
+  const SUPABASE_URL = 'PASTE_PROJECT_URL'
+  const SUPABASE_ANON_KEY = 'PASTE_ANON_KEY'
+
+  export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+   auth: {
+   storage: AsyncStorage,
+   autoRefreshToken: true,
+   persistSession: true,
+   detectSessionInUrl: false,
+   },
+  })
+
+  Then tell me which two values I must replace and where in the Supabase
+  dashboard to find them.
+
+Replace the two placeholder values before continuing. Open src/lib/supabase.ts and paste the Project URL and anon
+public key saved in section 2.5.
+
+Done when
+  •​ The src directory tree exists as specified
+  •​ theme.ts compiles and can be imported from a screen
+  •​ supabase.ts contains the real project URL and anon key
+
+3.3 Signing and capabilities
+
+                                                              10
+Aethon - Build Guide​                                                                                                           v1.0
+
+ Prerequisites          3.1 complete, Apple Developer approved                        Time                      Cost
+                                                                                      2 hours                   None
+Configures the native project so it can be installed on a physical device and later uploaded to TestFlight.
+
+  Terminal
+  # Open the workspace, not the project file
+  open ios/Aethon.xcworkspace
+
+ Step        Action in Xcode
+
+ 1           Select Aethon at the top of the left sidebar, then the Aethon target, then Signing and Capabilities.
+
+ 2           Set Team to your Apple Developer account. If it is absent, choose Add an Account and sign in.
+
+ 3           Set the Bundle Identifier to match the App ID created in section 2.2.
+
+ 4           Leave Automatically manage signing enabled. Xcode will create the provisioning profile.
+
+ 5           Select the plus Capability button and add Push Notifications.
+
+ 6           Select the plus Capability button and add Background Modes. Enable Audio and Remote notifications.
+
+ 7           Select the plus Capability button and add Increased Memory Limit. The on-device speech model requires more
+             memory than the default allowance.
+
+ 8           Open Info.plist. Add NSMicrophoneUsageDescription with the value: Aethon records spoken visit notes and converts
+             them to text on this device.
+
+ 9           Add NSCameraUsageDescription and NSPhotoLibraryUsageDescription with equivalent plain descriptions.
+
+ 10          Add a URL Type with the URL Scheme aethon. This allows sign-in links to open the application.
+
+Done when
+  •​ Signing and Capabilities shows no errors
+  •​ The application builds and runs on a physical iPhone from Xcode
+  •​ Info.plist contains all three usage descriptions and the aethon URL scheme
+
+3.4 Database schema
+ Prerequisites          2.5 complete                                                  Time                      Cost
+                                                                                      2 hours                   None
+Creates every table the build uses. Defining the whole schema now rather than incrementally avoids migrations
+mid-build and means later prompts can assume the fields exist.
+
+Open the Supabase SQL Editor and run the script in Appendix B in a single execution. It creates eleven tables, enables
+row level security, applies development policies, and inserts one demonstration client.
+
+The development security policies are permissive. They allow any authenticated user to read and write any row,
+which is appropriate while building and unacceptable in production. Appendix B includes the production policy set to
+apply before any real deployment.
+
+Done when
+  •​ All eleven tables appear in the Supabase table editor
+  •​ The clients table contains the demonstration row
+  •​ Running the script a second time completes without error
+
+3.5 Authentication and role routing
+
+                                                                    11
+Aethon - Build Guide​                                                                                                v1.0
+
+ Prerequisites          3.2 and 3.4 complete                                Time                    Cost
+                                                                            3 hours                 None
+Implements passwordless sign-in and routes each user to the correct part of the application based on their stored role.
+No password is ever created, stored or transmitted.
+
+How it works
+  24.​      The user enters an email address and requests a link.
+  25.​      Supabase sends a single-use link of the form aethon://auth/callback with a token. It expires after one hour.
+  26.​      Because the aethon URL scheme is registered, iOS opens the application rather than a browser.
+  27.​      The application exchanges the token for a session, which persists in device storage.
+  28.​      The application reads the user's role from user_profiles and renders the corresponding navigator.
+
+Sign-in is invitation only. The signInWithOtp call sets shouldCreateUser to false, so only accounts an administrator has
+already created can authenticate. Nobody can register themselves.
+
+  CLAUDE CODE PROMPT 3.5 - magic link authentication
+
+  The Supabase client is at src/lib/supabase.ts and tokens at src/constants/theme.ts.
+
+  FILE src/screens/auth/SignInScreen.tsx
+
+   SafeAreaView, white background, padding 24, content vertically centred.
+   Title 'AETHON' at 38pt bold COLORS.primaryDark, centred.
+   Subtitle 'Sign in' at 17pt COLORS.textMuted, centred, marginBottom 48.
+   Label 'Email address' at 16pt bold.
+   TextInput: height 56, border 1.5px COLORS.border, borderRadius 10,
+   fontSize 18, padding 14, keyboardType 'email-address',
+   autoCapitalize 'none', autoCorrect false.
+   Button 'Send sign-in link': height 56, full width, COLORS.primary,
+   borderRadius 10, 18pt bold white, marginTop 16.
+
+   States:
+   loading ActivityIndicator replaces the button label.
+   sent Replace the form with 'Check your email' at 22pt bold and
+   'We sent a link to [address]' at 17pt. Below, a tappable
+   'Use a different address' that resets the form.
+   error Red text below the input: 'No account found for this address.'
+
+   On submit:
+   const { error } = await supabase.auth.signInWithOtp({
+   email: email.trim().toLowerCase(),
+   options: {
+   shouldCreateUser: false,
+   emailRedirectTo: 'aethon://auth/callback',
+   },
+   })
+
+  FILE src/lib/auth.ts
+
+   export async function getProfile(userId: string) {
+   const { data } = await supabase
+   .from('user_profiles')
+   .select('role, client_id, name')
+   .eq('id', userId)
+   .single()
+   return data
+   }
+
+  FILE src/navigation/RootNavigator.tsx
+
+   State: 'loading' | 'signedOut' | 'carer' | 'resident' | 'web'
+
+   On mount call supabase.auth.getSession(). If a session exists, call
+   getProfile and set the state from the role. Map 'family' and
+   'management' to 'web'.
+
+   Subscribe to supabase.auth.onAuthStateChange and update the state on
+   SIGNED_IN and SIGNED_OUT.
+
+   Handle the return link:
+
+                                                            12
+Aethon - Build Guide​                                                                                                               v1.0
+
+     import { Linking } from 'react-native'
+     useEffect(() => {
+     const sub = Linking.addEventListener('url', ({ url }) => {
+     if (url.startsWith('aethon://auth/callback')) {
+     supabase.auth.getSessionFromUrl({ url })
+     }
+     })
+     return () => sub.remove()
+     }, [])
+
+     Render:
+     loading full screen ActivityIndicator in COLORS.primary
+     signedOut SignInScreen
+     carer CarerNavigator (placeholder screen for now)
+     resident ResidentNavigator (placeholder screen for now)
+     web A screen reading 'Please use the web portal' with the URL
+
+     Each placeholder screen needs a visible Sign out control calling
+     supabase.auth.signOut().
+
+  Update App.tsx to render RootNavigator.
+
+Create the test accounts
+  29.​     In Supabase open Authentication, then Users, then Invite user. Add one address for each role you intend to
+     test.
+  30.​      Copy each resulting user UUID.
+  31.​   In the SQL Editor insert a matching row into user_profiles for each, setting role to carer, resident, family or
+     management, and client_id where the role relates to a specific person.
+
+Done when
+  •​ Requesting a link sends a real email
+  •​ Opening the link on the device returns to the application and signs in
+  •​ Each test account lands on the screen matching its stored role
+  •​ Sign out returns to the sign-in screen and the session does not persist
+
+3.6 First TestFlight build
+ Prerequisites          3.3 and 3.5 complete                                         Time                      Cost
+                                                                                     2 hours                   None
+Establishes the distribution path before any feature work, so that shipping an increment to a tester later is a routine
+step rather than a new problem.
+
+ Step       Action
+
+ 1          In Xcode set the build destination to Any iOS Device (arm64).
+
+ 2          Choose Product, then Archive. This takes three to five minutes.
+
+ 3          In the Organizer window that opens, choose Distribute App, then App Store Connect, then Upload. Accept the
+            defaults.
+
+ 4          Open appstoreconnect.apple.com, select the application, then the TestFlight tab. Processing takes five to fifteen
+            minutes.
+
+ 5          Under Internal Testers add your own address. Install TestFlight on the device from the invitation email, then install
+            Aethon.
+
+ 6          For each subsequent build, increment the build number in Xcode and repeat steps one to three. Testers receive an
+            update notification automatically.
+
+Done when
+  •​ The application is installed on a device through TestFlight
+
+                                                                   13
+Aethon - Build Guide​                                               v1.0
+
+  •​ Signing in through the TestFlight build works end to end
+  •​ You have completed one full archive and upload cycle unaided
+
+                                                            14
+Aethon - Build Guide​                                                                                                v1.0
+
+CHAPTER 4
+
+The Resident Record
+
+The record is the centre of the product. This chapter builds the person's profile, the independence baseline captured
+when they join, and the care stage history that records their transitions over time.
+
+These four increments serve objective one directly. Without the care stage history there is no way to answer whether
+anyone stayed independent longer, and that record cannot be reconstructed retrospectively.
+
+4.1 Client list
+ Prerequisites          Chapter 3 complete                                      Time               Cost
+                                                                                3 hours            None
+The entry point to every other carer screen. It is used dozens of times a day, often one-handed, standing in a hallway.
+Speed of finding the right person is the only thing that matters here.
+
+  CLAUDE CODE PROMPT 4.1 - client list
+
+  FILE src/screens/carer/ClientListScreen.tsx
+
+  HEADER, backgroundColor COLORS.primary, paddingTop safe area plus 20:
+   Greeting by time of day with the carer's first name, 20pt bold white.
+   Today's date, 15pt white at 0.8 opacity.
+   A 'Sign out' text control at top right, 14pt white at 0.7 opacity.
+
+  SEARCH, padding 16:
+   TextInput height 52, backgroundColor COLORS.surfaceAlt, borderRadius 12,
+   padding 16, fontSize 17, placeholder 'Search'.
+   Filter the list on every keystroke by case-insensitive substring match.
+   No submit control and no debounce delay.
+
+  DATA:
+   Select all rows from clients.
+   For each, select the most recent visit_notes row (created_at, transcript).
+   Sort by most recent note descending. Clients with no notes sort last.
+
+  LIST, FlatList with RefreshControl:
+   Row height 76, white, borderBottomWidth 1 COLORS.border,
+   paddingHorizontal 16, flexDirection row, alignItems center.
+
+   Left: circular avatar 44px, backgroundColor COLORS.primaryLight,
+   initials inside in COLORS.primary at 18pt bold.
+   Centre, flex 1, marginLeft 14:
+   Name at 18pt bold.
+   Secondary line at 14pt COLORS.textMuted:
+   with a note 'Last note: today 10:24' / 'yesterday 16:40' / '12 Jun'
+   without one 'No notes yet'
+   Right: a chevron in COLORS.textMuted.
+
+   On press navigate to ClientProfileScreen with { clientId, clientName }.
+
+  STATES:
+   loading centred ActivityIndicator in COLORS.primary
+   error 'Could not load clients' with a 'Try again' button that refetches
+   empty centred 'No clients found' at 17pt COLORS.textMuted
+
+Done when
+  •​ The list loads and shows the demonstration client
+  •​ Typing in the search field filters immediately with no perceptible delay
+  •​ Pull to refresh reloads the list
+  •​ Every row is at least 76 points tall
+
+4.2 Client profile
+
+                                                               15
+Aethon - Build Guide​                                                                                               v1.0
+
+ Prerequisites          4.1 complete                                       Time                   Cost
+                                                                           3 hours                None
+A read-only view of the person. It is what a carer opens before a visit and what a covering carer reads when taking over
+an unfamiliar round. Editing is deliberately absent in this increment; the record is maintained by an administrator.
+
+  CLAUDE CODE PROMPT 4.2 - client profile
+
+  FILE src/screens/carer/ClientProfileScreen.tsx
+  Route parameters: { clientId, clientName }
+
+  Header: client name at 20pt bold with a back control.
+  Three tabs with an underline indicator in COLORS.primary: Profile,
+  Notes, History. This increment builds Profile; the others are placeholders.
+
+  PROFILE TAB, ScrollView on COLORS.surfaceAlt, padding 16.
+  Each section is a white card, borderRadius 12, padding 18, marginBottom 12,
+  with a 4px left border in the colour noted.
+
+  IDENTITY, border COLORS.primary:
+   Name at 24pt bold COLORS.primaryDark.
+   Date of birth and calculated age at 16pt COLORS.textSecond.
+   Room or address at 16pt if present.
+
+  ALLERGIES, border COLORS.danger:
+   Heading 'Allergies' at 17pt bold COLORS.danger.
+   Each entry as a chip: COLORS.dangerLight background, COLORS.danger text,
+   15pt, borderRadius 16, paddingHorizontal 12, height 32.
+   If the array is empty show 'None recorded' at 16pt COLORS.textMuted italic.
+
+  MEDICATIONS, border COLORS.primary:
+   Heading 'Medications' followed by the count in the same weight and
+   colour, for example 'Medications (7)'. No badge and no colour change.
+   For each entry in the medications JSON array: name at 17pt bold,
+   dose at 16pt COLORS.textSecond, scheduled times as small grey chips.
+   Below the list, always shown regardless of count, at 13pt
+   COLORS.textMuted italic:
+   'Reference only. Not a medication administration record.'
+
+  PHYSICIAN, border COLORS.blue:
+   Heading 'Physician' at 17pt bold. Name at 17pt, email at 16pt COLORS.blue.
+
+  CONTACTS, border COLORS.blue:
+   Each emergency contact: name at 17pt bold, relationship and telephone
+   at 16pt COLORS.textSecond, ordered by priority.
+
+The medication count is displayed, not evaluated. It appears in the heading in the same weight as the surrounding
+text. There is no threshold at which the display changes, and no notice is generated. A carer can read a number and
+decide what it means; that judgement belongs to a person, not to the application.
+
+Done when
+  •​ The profile renders every section for the demonstration client
+  •​ An empty allergy list shows the placeholder rather than an empty area
+  •​ The medication reference line appears for every client regardless of count
+  •​ No element on the screen changes appearance based on a numeric threshold
+
+4.3 Independence baseline
+ Prerequisites          4.2 complete                                       Time                   Cost
+                                                                           2 hours                None
+Five fields captured once, when a person is added. They describe the starting point against which everything later is
+read. They take about a minute to complete and cannot be reconstructed afterwards, which is why they are captured
+at enrolment rather than when they are first needed.
+
+                                                           16
+Aethon - Build Guide​                                                                                                       v1.0
+
+ Field                         Values                     Why it is recorded
+
+ Age at enrolment              Integer                    The single strongest contextual variable for interpreting any later
+                                                          change.
+
+ Lives alone                   Yes or no                  Distinguishes a person managing unaided from one with
+                                                          continuous informal support.
+
+ Long-term conditions          Count                      A crude but workable indicator of baseline complexity.
+
+ Mobility aid                  None, stick, frame,        Baseline physical independence in one field.
+                               wheelchair
+
+ Support already in place      Free text, one line        What the person already receives, in the carer's own words.
+
+  CLAUDE CODE PROMPT 4.3 - independence baseline
+
+  The clients table already contains baseline_age, baseline_lives_alone,
+  baseline_condition_count, baseline_mobility_aid, baseline_support_note
+  and baseline_recorded_at.
+
+  FILE src/screens/carer/BaselineScreen.tsx
+  Route parameters: { clientId, clientName }
+
+  Reached from the Profile tab. If baseline_recorded_at is null the profile
+  shows a single line at the top of the Identity card:
+   'Baseline not yet recorded' at 15pt COLORS.amber, tappable, opening
+   this screen. Once recorded the line disappears.
+
+  ScrollView, padding 20. Five fields, each with a 17pt bold label:
+
+   'Age' - numeric TextInput, height 56, fontSize 20.
+
+   'Lives alone' - two buttons side by side, each flex 1, height 56:
+   Yes and No. Selected fills COLORS.primary with white text.
+
+   'Long-term conditions' - a row of buttons 0, 1, 2, 3, 4, 5+,
+   each 48 by 48, borderRadius 8. Selected fills COLORS.primary.
+
+   'Mobility aid' - four full width buttons stacked, height 52 each:
+   None, Walking stick, Walking frame, Wheelchair.
+
+   'Support already in place' - multiline TextInput, height 80,
+   fontSize 16, placeholder 'Family visits twice a week'.
+
+  Save button, COLORS.primary, full width, height 56, 18pt bold white.
+   Write all five fields plus baseline_recorded_at set to today.
+   Return to the profile and show a two second confirmation.
+
+  Display on the Profile tab once recorded, as a card with a
+  COLORS.textMuted left border, heading 'Baseline at enrolment', showing
+  the five values as plain label and value rows with the recording date
+  beneath. This section is never editable after saving.
+
+Done when
+  •​ The baseline prompt appears on a profile with no baseline recorded
+  •​ Saving writes all five fields and the recording date
+  •​ The prompt disappears and the baseline card appears in its place
+  •​ The baseline card cannot be edited
+
+4.4 Care stage and transitions
+ Prerequisites          4.2 complete                                           Time                      Cost
+                                                                               3 hours                   None
+Records which of the three stages a person is currently in, and every transition between them. This is the field that
+answers whether the product achieved anything, and it is the reason the record can follow a person into residential
+care rather than stopping at the door.
+
+                                                            17
+Aethon - Build Guide​                                                                                               v1.0
+
+Two dates, not one
+Every transition stores two dates. The date a carer noticed the change, and the carer's estimate of when it actually
+happened. These differ, and the gap is larger for people visited less often. Recording only the observation date would
+build a systematic distortion into the record that could never be removed later.
+
+  CLAUDE CODE PROMPT 4.4 - care stage
+
+  The clients table contains care_stage, care_stage_observed_at and
+  care_stage_estimated_since. The care_stage_history table contains
+  client_id, from_stage, to_stage, observed_at, estimated_since,
+  changed_by and note.
+
+  Add a CARE STAGE card to the Profile tab, directly below Identity,
+  with a 4px left border in COLORS.primary.
+
+   Heading 'Living situation' at 17pt bold COLORS.primaryDark.
+   Current stage as a pill at 18pt, using plain labels:
+   independent 'Living independently'
+   family_supported 'Supported by family'
+   professionally_supported 'Professional care at home'
+   residential 'In a care facility'
+   Beneath: 'Since [month year]' at 15pt COLORS.textMuted.
+   If history exists, one further line: 'Previously [label] until [date]'.
+   A 'Change' text control at the right of the heading row.
+
+  FILE src/screens/carer/CareStageModal.tsx
+
+   Step one - 'What is the situation now?'
+   Four options as full width buttons, height 64, in the order above.
+
+   Step two - 'Roughly when did this change?'
+   Four options, height 56: This month, Last month, Two to three
+   months ago, Longer ago.
+   Map to a date: today, minus one month, minus two and a half months,
+   minus six months.
+
+   Step three - optional single line note, 'What changed?'
+
+   On save perform both writes:
+   update clients set
+   care_stage = selected,
+   care_stage_observed_at = today,
+   care_stage_estimated_since = mapped date
+   insert into care_stage_history
+   { client_id, from_stage, to_stage, observed_at, estimated_since,
+   changed_by, note }
+
+   The history insert is the important half. The current value says where
+   a person is. Only the history says how long they remained there.
+
+  Add a TRANSITIONS section to the History tab: every care_stage_history
+  row in reverse chronological order, showing the two labels, the estimated
+  date, the recorded date if it differs, and the note.
+
+Use the vocabulary the organisation already uses. Before fixing the four labels, ask the carers what terms their service
+uses for these stages. A taxonomy invented elsewhere feels foreign and gets filled in carelessly. Keep the four stored
+values as they are and change only what appears on screen.
+
+Done when
+  •​ The current stage displays with the correct label and date
+  •​ Changing the stage writes both the client row and a history row
+  •​ Both observed_at and estimated_since are populated and can differ
+  •​ The History tab lists every transition in reverse chronological order
+
+                                                              18
+Aethon - Build Guide​                                                                                               v1.0
+
+CHAPTER 5
+
+Carer Field Tools
+
+Four increments that replace end-of-shift documentation from memory with capture at the point of care. This is the
+heaviest single burden on a visiting carer and the largest time saving the product offers.
+
+Transcription runs on the device. No audio is transmitted, there is no per-minute cost, and the feature works in
+buildings with no usable mobile signal.
+
+5.1 Voice capture
+ Prerequisites          4.1 complete                                       Time                   Cost
+                                                                           3 hours                None
+Records audio at the bedside. Deliberately built and tested before transcription, so that a recording problem is never
+mistaken for a transcription problem.
+
+  CLAUDE CODE PROMPT 5.1 - voice capture
+
+  FILE src/screens/carer/VoiceNoteScreen.tsx
+  Route parameters: { clientId, clientName }
+
+  States: 'idle' | 'recording' | 'saving'
+
+  Full screen, backgroundColor COLORS.primaryDark, SafeAreaView.
+
+  HEADER:
+   Back control top left, white, 44 point target.
+   Client name centred at 18pt white.
+   Below it at 13pt white 0.5 opacity: 'Transcribed on this device'.
+
+  CENTRE, flex 1, centred on both axes:
+
+   idle
+   Circle 140px, COLORS.primary, borderRadius 70, microphone glyph
+   at 56pt white. Below at marginTop 24: 'Tap to record' at 20pt white.
+   Below that: 'Speak normally. Up to two minutes.' at 15pt white 0.6.
+
+   recording
+   Circle 140px in a dark red. Animated.loop pulsing scale 1.0 to 1.12
+   over 800ms. Stop glyph at 48pt white.
+   Elapsed time as m:ss at 32pt bold white, updated each second.
+   'Tap to stop' at 16pt white 0.7.
+   Stop automatically at 120 seconds.
+
+   saving
+   White tick in a circle at 100px. 'Note saved' at 24pt bold white.
+   Return to the previous screen after 1200ms.
+
+  IMPLEMENTATION:
+   import AudioRecorderPlayer from 'react-native-audio-recorder-player'
+   const recorder = useRef(new AudioRecorderPlayer()).current
+
+   async function start() {
+   await recorder.startRecorder('aethon_note.m4a')
+   setState('recording')
+   startTimer()
+   }
+
+   async function stop() {
+   stopTimer()
+   const path = await recorder.stopRecorder()
+   // In this increment, insert the row with a null transcript.
+   await supabase.from('visit_notes').insert({
+   client_id: clientId,
+   carer_id: userId,
+   carer_name: carerName,
+   transcript: null,
+   transcription_status: 'pending',
+   })
+   setState('saving')
+
+                                                           19
+Aethon - Build Guide​                                                                                                                   v1.0
+
+   console.log('Audio recorded at', path)
+   }
+
+  Add a 'Record note' button to the client profile header opening this screen.
+
+Done when
+  •​ Recording starts on first tap and the timer advances
+  •​ The pulsing animation runs without stuttering
+  •​ Stopping writes a visit_notes row with status pending
+  •​ The recording stops on its own at two minutes
+  •​ The console shows a valid file path for the recorded audio
+
+5.2 On-device transcription
+ Prerequisites          5.1 complete                                              Time                         Cost
+                                                                                  4 hours                      None
+Converts the recording to text using a speech model bundled inside the application. The model is selected empirically
+before any code is written, because the right size depends entirely on the speech of the people who will use it.
+
+Select the model first
+Obtain a recording of thirty to sixty seconds from a carer who will use the product, speaking as they would when
+dictating a real note rather than in conversation. Test each model size against that recording and compare the result to
+what was actually said.
+
+ Model             Size when quantised        Typical time for a 30 second note          Use when
+
+ tiny              Approximately 40 MB        A few seconds                              Speed matters far more than accuracy.
+                                                                                         Usually too weak for regional speech.
+
+ base              Approximately 60 MB        5 to 10 seconds                            The default starting point. Test this first.
+
+ small             Approximately 180 MB       15 to 25 seconds                           Base is not accurate enough and the
+                                                                                         background flow makes the wait invisible.
+
+ medium            Approximately 500 MB       45 seconds or more                         Not recommended on a handset. The size
+                                                                                         and battery cost outweigh the gain.
+
+Record the transcript and the elapsed time for each size. Choose the smallest model whose output a carer would
+accept with light correction. Then repeat the best result with the vocabulary prompt described in the build instruction
+below, which biases the model towards clinical and medication terms and usually improves names noticeably.
+
+If no model size produces usable output, stop before building. The options, in order: ask whether the carer will
+dictate in standard German and retest; move up one model size and adopt the background flow; evaluate a regional
+speech provider offering on-premise or in-country processing; or replace free speech with structured input, which is a
+different product and should be planned as one.
+
+Bundle the model
+Download the chosen model file from the whisper.cpp model repository and add it to the Xcode project under a
+models group with copy items enabled. For a small number of testers, bundling is simpler than downloading on first
+launch and saves an hour of work; revisit that decision above roughly five testers.
+
+Transcribe without making the carer wait
+On-device transcription is slower than a network service. Rather than reducing the wait, remove it: save the note
+immediately, transcribe in the background, and fill the text in when it completes. The carer taps stop, sees a
+confirmation and leaves.
+
+                                                                20
+Aethon - Build Guide​                                                         v1.0
+
+  CLAUDE CODE PROMPT 5.2 - on-device transcription
+
+  whisper.rn is installed and a ggml model file is bundled in the Xcode
+  project. Transcription must run entirely on the device.
+
+  FILE src/lib/transcription.ts
+
+   import { initWhisper } from 'whisper.rn'
+   import RNFS from 'react-native-fs'
+
+   const VOCABULARY =
+   'Pflegedokumentation: Blutdruck, Puls, Medikamente, Mobilitaet, ' +
+   'Schmerzen, Appetit, Koerperpflege, Spitex, Ramipril, Metformin, ' +
+   'Aspirin, Klientin, Klient'
+
+   let ctx: any = null
+
+   // Load once and keep the context. Loading costs one to three seconds
+   // and must not be repeated per note.
+   export async function initTranscription() {
+   if (ctx) return ctx
+   ctx = await initWhisper({
+   filePath: require('../../models/ggml-base-q5_1.bin'),
+   })
+   return ctx
+   }
+
+   export async function transcribe(path: string): Promise<string | null> {
+   try {
+   const whisper = await initTranscription()
+   const { promise } = whisper.transcribe(path, {
+   language: 'de',
+   prompt: VOCABULARY,
+   translate: false,
+   maxThreads: 4,
+   })
+   const { result } = await promise
+   return result?.trim() ?? null
+   } catch (e) {
+   console.error('Transcription failed', e)
+   return null
+   } finally {
+   // Delete the audio immediately and unconditionally.
+   try { await RNFS.unlink(path) } catch {}
+   }
+   }
+
+  Call initTranscription() once when a carer signs in, so the model is
+  already loaded before the first recording.
+
+  MODIFY the stop handler in VoiceNoteScreen so it does not await:
+
+   async function stop() {
+   stopTimer()
+   const path = await recorder.stopRecorder()
+
+   const { data: note } = await supabase.from('visit_notes').insert({
+   client_id: clientId,
+   carer_id: userId,
+   carer_name: carerName,
+   transcript: null,
+   transcription_status: 'pending',
+   }).select().single()
+
+   setState('saving') // the carer may now leave
+
+   transcribe(path).then(async text => {
+   await supabase.from('visit_notes').update({
+   transcript: text ?? '',
+   raw_transcript: text ?? '',
+   transcription_status: text ? 'complete' : 'failed',
+   }).eq('id', note.id)
+   })
+   }
+
+  NOTE LIST STATES - apply in the Notes tab and the client list:
+   pending 'Transcribing' in italic grey with a small activity indicator
+   failed 'Transcription unavailable. Tap to type the note.' in
+   COLORS.amber, tappable, opening a manual text editor
+
+                                                         21
+Aethon - Build Guide​                                                                                                v1.0
+
+   complete the transcript
+
+  Subscribe to Supabase realtime UPDATE on visit_notes so a row fills in
+  without a manual refresh.
+
+The audio deletion is not an optimisation. It is the reason no recording ever leaves the device or persists on it. Keep
+the unlink call in the finally block so it runs whether transcription succeeds or fails.
+
+Done when
+  •​ A fifteen second note produces a transcript within the expected time
+  •​ The note row appears immediately with pending status, before transcription
+  •​ The row updates to the transcript without a manual refresh
+  •​ The audio file no longer exists on the device after transcription
+  •​ Airplane mode does not prevent transcription
+
+5.3 Note review
+ Prerequisites          5.2 complete                                         Time                  Cost
+                                                                             2 hours               None
+A completed transcript is unreviewed until a carer has read it and confirmed it. Without this step a note may never be
+read at all, and an uncorrected transcription error becomes part of the permanent record.
+
+  CLAUDE CODE PROMPT 5.3 - note review and confirmation
+
+  A note with a transcript but a null reviewed_at is unreviewed.
+
+  IN the Notes tab and the client list:
+   An unreviewed note shows an amber dot and the label 'Needs checking'.
+
+  IN the carer home header:
+   A count, for example '3 notes to check'. Tapping it opens a list
+   filtered to unreviewed notes across all clients.
+
+  FILE src/screens/carer/NoteReviewScreen.tsx
+   Route parameters: { noteId }
+
+   Header: client name and the time the note was recorded.
+   Label at 14pt COLORS.textMuted: 'Check and correct if needed'.
+   Multiline TextInput filled with the transcript, fontSize 17,
+   lineHeight 26, textAlignVertical top, flex 1, white, padding 16.
+
+   One primary button at the bottom, height 56, COLORS.primary:
+   'Confirm note'.
+
+   On confirm:
+   Compute the Levenshtein distance between raw_transcript and the
+   current text. Implement it as a standard dynamic programming
+   function in src/lib/text.ts.
+
+   await supabase.from('visit_notes').update({
+   transcript: currentText,
+   was_edited: distance > 0,
+   raw_length: rawTranscript.length,
+   edit_distance: distance,
+   reviewed_at: new Date().toISOString(),
+   }).eq('id', noteId)
+
+   Never confirm automatically. Not on scroll, not on close, not on
+   navigating away. The explicit tap is what the field records.
+
+Done when
+  •​ An unreviewed note is visibly marked in both lists
+  •​ The header count is accurate and opens the filtered list
+  •​ Confirming writes reviewed_at and a correct edit distance
+  •​ Leaving the screen without confirming does not mark the note reviewed
+
+                                                            22
+Aethon - Build Guide​                                                                                                   v1.0
+
+5.4 Structured visit log
+ Prerequisites          5.3 complete                                       Time                    Cost
+                                                                           3 hours                 None
+Adds optional structure to a note: what kind of visit it was and what was done. Structured fields make later
+summarising possible without reading every transcript.
+
+Every field here is optional and appears after the spoken note, never before it. A required field placed ahead of the
+recording would slow down the one action that must stay fast.
+
+  CLAUDE CODE PROMPT 5.4 - structured visit log
+
+  Extend NoteReviewScreen with a collapsed section below the transcript,
+  headed 'Add detail (optional)' with a chevron. Expand and collapse with
+  LayoutAnimation.
+
+  VISIT TYPE - a two by two grid, each button height 64, margin 4:
+   Medication Personal care
+   Social visit Health check
+   Selected fills COLORS.primary with white text and borderRadius 10.
+   Unselected is white with a 1.5px COLORS.border and COLORS.text.
+   Tapping the selected option clears it. Nothing here is mandatory.
+
+  TASKS - five rows, each height 52, white, borderRadius 8, marginBottom 4:
+   A custom checkbox on the left, 26px square, 2px COLORS.border,
+   filling COLORS.primary with a white tick when checked.
+   Label on the right at 16pt.
+   Medication administered
+   Meal supported
+   Mobility assisted
+   Personal care assisted
+   Fluids encouraged
+
+  Persist to visit_type and to tasks as a JSON object of five booleans
+  when the note is confirmed. An empty structured section must never
+  prevent confirmation.
+
+Done when
+  •​ The section is collapsed by default and expands smoothly
+  •​ A note can be confirmed with no structured fields set
+  •​ Selecting an already selected visit type clears it
+  •​ Visit type and tasks persist correctly and appear in the note list
+
+                                                                 23
+Aethon - Build Guide​                                                                                                v1.0
+
+CHAPTER 6
+
+Observation and Forecasting
+
+Three increments that record how a person is doing over time and present that history so a professional can see a
+direction of travel. This is where the product supports the second half of objective one: recognising early that
+independence is becoming difficult to sustain.
+
+The application presents. It does not conclude. There is no score, no threshold, and no notice generated from a value.
+A trend is shown; a professional reads it.
+
+6.1 Health observations
+ Prerequisites          Chapter 5 complete                                 Time                    Cost
+                                                                           3 hours                 None
+A short, structured record of how someone is: mood, sleep, pain, weight. Enterable by a carer during a visit, by a family
+member, or by the person themselves from the resident application built in chapter 10.
+
+  CLAUDE CODE PROMPT 6.1 - health observations
+
+  FILE src/screens/shared/ObservationScreen.tsx
+  Props: { clientId, mode: 'carer' | 'resident' | 'family' }
+
+  The resident mode uses the resident type scale and 80 point targets.
+  The other modes use the standard scale.
+
+  ScrollView, padding 20.
+
+  MOOD:
+   Label: resident 'How are you feeling today?', otherwise 'Mood'.
+   Five buttons in a row, 68 by 68 in resident mode and 56 by 56
+   otherwise, values 1 to 5, using clear distinct faces.
+   Selected: 3px COLORS.primary border and a spring scale to 1.15.
+
+  SLEEP:
+   Label: resident 'How did you sleep?', otherwise 'Sleep quality'.
+   Five star controls, filled to the selected value in COLORS.amber.
+
+  PAIN:
+   Label 'Any pain today?'.
+   Eleven segments, 0 to 10, each roughly (width minus 40) divided by 11,
+   height 48. Colour by band: 0 to 3, 4 to 6, 7 to 10 using COLORS.primary,
+   COLORS.amber and COLORS.danger. Unselected segments at 0.35 opacity.
+   Selected value displayed above at 34pt bold in its band colour.
+   At zero also show 'No pain today' at 18pt COLORS.primary.
+
+  WEIGHT:
+   Numeric TextInput, height 56, fontSize 20, suffix kg.
+   Hidden in resident mode.
+
+  NOTES:
+   Multiline TextInput, height 90, fontSize 16.
+   Label: resident 'Anything else?', otherwise 'Observations'.
+
+  Save button, full width, height 56 or 80 in resident mode.
+   Insert into health_logs { client_id, logged_by, mood, sleep, pain,
+   weight_kg, notes }. Show a two second confirmation and dismiss.
+
+  Every field is optional. Saving with only a mood value is valid.
+
+Done when
+  •​ All five inputs work and every one is optional
+  •​ Resident mode uses the larger scale and 80 point targets throughout
+  •​ Saving writes one health_logs row
+  •​ A record with only a mood value saves without error
+
+                                                            24
+Aethon - Build Guide​                                                                                                    v1.0
+
+6.2 Trend display
+ Prerequisites          6.1 complete                                          Time                     Cost
+                                                                              3 hours                  None
+Presents observation history as a shape rather than a number. A carer reading a downward line reaches a conclusion
+the application never states.
+
+  CLAUDE CODE PROMPT 6.2 - trend display
+
+  Add a TRENDS card to the Profile tab with a 4px left border in
+  COLORS.border. The neutral border colour is deliberate: this card is
+  informational, not actionable.
+
+  Heading 'Recent observations' at 17pt bold COLORS.text.
+
+  MOOD, last 14 entries:
+   A row of 14 circles, 20px diameter, 4px apart.
+   Filled by value: 4 to 5, 3, 1 to 2 using COLORS.primary, COLORS.amber
+   and COLORS.danger. Days with no entry render as a light grey outline.
+   Beneath, at 13pt COLORS.textMuted: 'Last 14 days'.
+
+  WEIGHT, last 12 readings, only if any exist:
+   A sparkline drawn with plain Views, fixed height 60.
+   One thin vertical bar per reading, scaled between the series minimum
+   and maximum. All bars COLORS.border except the most recent in
+   COLORS.text.
+   Beneath, at 15pt COLORS.textSecond:
+   'First recorded [x] kg on [date], most recent [y] kg on [date]'
+   No difference, no percentage, no arrow, no directional colour.
+
+  PAIN, last 14 entries:
+   The same 14 circle pattern, filled by band using the 0 to 3, 4 to 6,
+   7 to 10 colours.
+
+  GOVERNING RULE for this increment:
+   No threshold may change any visual state. If the implementation needs
+   a comparison of the form value greater than x to decide what to render,
+   the implementation is wrong. Scale to the data, not to a constant.
+
+Neutral display is a deliberate design decision, not a limitation. An alert that fires on a fixed threshold trains the
+people who see it to dismiss it. A clear display that a professional actually reads is more likely to result in action than a
+coloured warning they have learned to ignore.
+
+Done when
+  •​ All three trends render for a client with observation history
+  •​ A client with no observations shows the card with an empty state, not a crash
+  •​ The weight sparkline shows no difference, percentage or directional colour
+  •​ Searching the file for a comparison against a numeric constant that drives rendering returns nothing
+
+6.3 Follow-up prompts
+ Prerequisites          5.4 complete                                          Time                     Cost
+                                                                              2 hours                  None
+Three optional reminders a carer can set for the next visit. They cover matters that are common, usually treatable, and
+rarely raised by the person unprompted.
+
+The wording is the substance of this increment. A control reading continence difficulty is an assertion about a person
+made by someone who has not assessed it. A control reading ask about continence is a note to oneself. The second is
+more accurate, more respectful, and produces better information.
+
+  CLAUDE CODE PROMPT 6.3 - follow-up prompts
+
+  Add a further sub-section to the optional detail area of
+  NoteReviewScreen, below the task list.
+
+                                                              25
+Aethon - Build Guide​                                                              v1.0
+
+   Heading 'Worth asking about next visit' at 16pt bold.
+   Caption at 13pt COLORS.textMuted:
+   'Not an assessment. These are common, usually treatable, and
+   rarely raised by the person themselves.'
+
+   Three checkbox rows, height 52 each, same component as the task list:
+   Ask about hearing
+   Ask about vision
+   Ask about continence
+
+   Persist to ask_about_hearing, ask_about_vision and
+   ask_about_continence on visit_notes.
+
+  On the Profile tab, if any prompt was set within the last 90 days,
+  show one line in the Trends card at 15pt COLORS.textSecond:
+   'Flagged to ask about: hearing, continence'
+
+  These are never shown in the family portal.
+
+Done when
+  •​ The three prompts save and appear on the profile within the 90 day window
+  •​ The wording reads as a reminder to ask, not as a statement about the person
+  •​ Nothing from this increment appears anywhere in the family portal
+
+                                                            26
+Aethon - Build Guide​                                                                                         v1.0
+
+CHAPTER 7
+
+Escalation and Handover
+
+Three increments covering what happens when a carer needs a physician to look at something, and what happens at
+the end of a shift. Both are currently done from memory, by telephone, or on paper.
+
+7.1 Physician escalation
+ Prerequisites          Chapter 6 complete                             Time                  Cost
+                                                                       3 hours               None
+Assembles a structured summary and hands it to whatever channel the organisation actually uses. Two output paths
+are provided because a carer using a personal handset frequently has no work email account configured on it.
+
+  CLAUDE CODE PROMPT 7.1 - physician escalation
+
+  FILE src/screens/carer/EscalationScreen.tsx
+  Route parameters: { clientId, clientName, physicianName, physicianEmail }
+
+  Reached from a 'Raise with physician' control on the Profile tab.
+
+  HEADER CARD, COLORS.dangerLight, 4px COLORS.danger left border:
+   'Raise with physician' at 20pt bold COLORS.danger.
+   Client name at 17pt.
+
+  CONTEXT:
+   'Recent notes' at 17pt bold.
+   The three most recent visit_notes as grey cards: date, visit type,
+   and the first 120 characters of the transcript.
+
+  REASON, required:
+   Label 'Reason' at 17pt bold.
+   Multiline TextInput, height 110, fontSize 16.
+   If empty on submit show 'Please give a reason' in COLORS.danger
+   and do not proceed.
+
+  Compose the summary once and reuse it for both outputs:
+   const subject = 'Aethon: ' + clientName + ' - physician review requested'
+   const body = [
+   'Carer: ' + carerName,
+   'Date: ' + new Date().toLocaleString('de-CH'),
+   'Reason: ' + reason,
+   '',
+   'Recent visit notes:',
+   ...recent.map(n => formatDate(n.created_at) + ' - ' + n.transcript),
+   '',
+   'Generated by Aethon, a care coordination tool.',
+   'This is not a clinical alerting system. Please reply to the carer.',
+   ].join('\n')
+
+  TWO CONTROLS, both always shown:
+   'Open email' - Linking.openURL('mailto:' + physicianEmail +
+   '?subject=' + encodeURIComponent(subject) +
+   '&body=' + encodeURIComponent(body))
+   'Copy summary' - Clipboard.setString(body), then show 'Copied' for
+   two seconds. Never assume an email account exists on the device.
+
+  Either control also writes:
+   update the most recent visit_note for this client, setting
+   physician_flagged true and flag_reason to the entered reason.
+
+  Return to the profile with a confirmation reading 'Escalation recorded'.
+  Word it as recorded, not as sent. Delivery is not confirmed.
+
+Done when
+  •​ The summary contains the reason and the three most recent notes
+  •​ Both the email and copy controls produce identical text
+  •​ Copy works on a device with no mail account configured
+  •​ Either control marks the note flagged and stores the reason
+
+                                                          27
+Aethon - Build Guide​                                                                                                    v1.0
+
+  •​ The confirmation says recorded rather than sent
+
+7.2 Escalation outcome
+ Prerequisites          7.1 complete                                          Time                     Cost
+                                                                              2 hours                  None
+Records what came of each escalation. Without this the record shows only that concerns were raised, which cannot
+demonstrate that raising them achieved anything.
+
+  CLAUDE CODE PROMPT 7.2 - escalation outcome
+
+  IN the Notes tab, any note with physician_flagged true and a null
+  flag_outcome shows a bar above the transcript:
+   'Raised with physician on [date]' at 15pt bold COLORS.danger,
+   and beneath it 'What happened?' with four controls, height 44:
+   Physician reviewed, change made
+   Physician reviewed, no change
+   Raised, no response yet
+   Not raised in the end
+
+   On selection set flag_outcome to the chosen label and flag_outcome_at
+   to the current time. The bar is then replaced by a single line:
+   'Physician reviewed, change made - [date]' at 15pt COLORS.textSecond.
+
+  IN the carer home header, a plain text count:
+   '[n] escalations awaiting outcome'. No colour and no badge.
+   Tapping it opens a list filtered to those notes.
+
+This single field converts a record of activity into a record of effect. Thirty observations raised, eleven reaching a
+physician, four resulting in a change is a description of what the product does. Thirty observations raised is not.
+
+Done when
+  •​ A flagged note shows the outcome bar until an outcome is chosen
+  •​ Choosing an outcome stores both the label and the timestamp
+  •​ The header count is accurate and opens the filtered list
+  •​ A note with an outcome shows the summary line rather than the bar
+
+7.3 Shift handover
+ Prerequisites          7.2 complete                                          Time                     Cost
+                                                                              4 hours                  None
+Assembles the handover document from what was already recorded during the shift. The carer writes nothing. This
+replaces the most disliked recurring task in home care and is the clearest demonstration of the product's value to a
+service manager.
+
+  CLAUDE CODE PROMPT 7.3 - shift handover
+
+  SHIFT BOUNDARY:
+   Add a 'Start shift' control to the client list header. It inserts a
+   shifts row with started_at and stores the id in AsyncStorage. The
+   label then reads 'End shift'.
+   If no shift was started, fall back to notes from the last 12 hours.
+   Use the shift boundary rather than the calendar date, because a night
+   shift crosses midnight and a date query would split it silently.
+
+  FILE src/screens/carer/HandoverScreen.tsx
+
+  ON MOUNT collect:
+   visit_notes where carer_id is the current user and created_at is at
+   or after the shift start, joined to client names
+   escalations within the shift that have no recorded outcome
+
+  SCREEN, ScrollView, white, padding 20. This in-application view is the
+  primary output. The export is secondary.
+
+                                                             28
+Aethon - Build Guide​                                                                    v1.0
+
+   Header: 'Shift handover' at 24pt bold COLORS.primaryDark.
+   Carer name, date, and shift start and end times at 16pt.
+
+   Summary strip, three boxes in a row:
+   clients seen | notes recorded | escalations open
+   Value at 26pt bold, label at 13pt COLORS.textMuted.
+
+   'Clients seen' - one row each: name at 17pt bold, visit type and
+   time at 15pt COLORS.textMuted.
+
+   'Notes' - grouped by client. Each note shows the time at 15pt bold
+   and the full transcript at 16pt with lineHeight 24, selectable so
+   it can be copied.
+
+   'Open escalations', only if any exist - client name, reason and time,
+   on COLORS.dangerLight cards.
+
+   Footer at 13pt COLORS.textMuted italic:
+   'Care coordination summary. Not an official medical record.'
+
+  THREE CONTROLS at the bottom:
+   'Copy as text' - Clipboard.setString of a plain text rendering of the
+   same content. Many services paste handovers into an existing system,
+   for which text is more useful than a document.
+   'Export PDF' - see below.
+   'Close shift' - set ended_at, clear the stored id.
+
+  FILE src/lib/handover.ts
+   export function buildHandoverHtml(data): string
+   Return a complete HTML document with inline CSS:
+   body Arial, padding 32px, font-size 14px, colour #1A1A1A
+   h1 26px bold #085041
+   h2 background #1D9E75, white, padding 8px 14px, border-radius 6px
+   table width 100%, border-collapse collapse
+   th background #E1F5EE, colour #085041, padding 8px, text-align left
+   td padding 8px, border-bottom 1px solid #EEE
+   .note background #F5F5F5, padding 12px, border-radius 6px
+   .escalation background #FCEBEB, border-left 4px solid #A32D2D
+   .footer margin-top 48px, font-size 11px, colour #AAA
+   Include the same footer sentence as the screen.
+
+  EXPORT:
+   import RNHTMLtoPDF from 'react-native-html-to-pdf'
+   import Share from 'react-native-share'
+   const pdf = await RNHTMLtoPDF.convert({
+   html: buildHandoverHtml(data),
+   fileName: 'Aethon_Handover_' + dateString,
+   base64: false,
+   })
+   await Share.open({ url: 'file://' + pdf.filePath,
+   type: 'application/pdf' })
+
+Done when
+  •​ Starting a shift, recording three notes and ending it produces a correct handover
+  •​ A shift crossing midnight is captured as one shift
+  •​ Copy as text produces a usable plain text handover
+  •​ The PDF is presentable to a service manager without apology
+  •​ Closing the shift clears the stored identifier
+
+                                                              29
+Aethon - Build Guide​                                                                                                v1.0
+
+CHAPTER 8
+
+Family Access
+
+Four increments producing a web application for family members. Families reach it in a browser with no installation,
+which removes the single largest barrier to adoption among people who will use the product a few times a week.
+
+Families see structure, never clinical prose. A carer who knows a family will read her notes verbatim writes different
+notes, and the value of fast dictation disappears.
+
+8.1 Web application setup
+ Prerequisites          Chapter 3 complete                                 Time                    Cost
+                                                                           2 hours                 None
+
+Creates the Next.js project for the family and facility web applications. It uses the same Supabase project as the mobile
+application, so no data synchronisation is required between them.
+
+  Terminal
+  cd ~/Documents
+  npx create-next-app@latest aethon-web --typescript --tailwind --app
+
+  # Answer: ESLint yes, src directory yes, import alias no
+
+  cd aethon-web
+  npm install @supabase/supabase-js
+  code .
+
+Create .env.local in the project root with the same Supabase URL and anon key used by the mobile application,
+prefixed with NEXT_PUBLIC_ so they are available in the browser.
+
+  CLAUDE CODE PROMPT 8.1 - web foundation
+
+  FILE src/lib/supabase.ts
+   import { createClient } from '@supabase/supabase-js'
+   export const supabase = createClient(
+   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+   )
+
+  FILE src/app/page.tsx - sign in
+   Centred column, max-w-[480px], px-6 py-12, min-h-screen, flex,
+   items-center.
+   'AETHON' text-4xl font-medium text-[#085041].
+   'Family portal' text-lg text-gray-500 mt-2.
+   Label 'Email address' text-base font-medium mt-8.
+   Input type email, w-full h-14 text-lg border border-gray-300
+   rounded-xl px-4 mt-2.
+   Button 'Send sign-in link', w-full h-14 bg-[#1D9E75] text-white
+   text-lg font-medium rounded-xl mt-4.
+
+   await supabase.auth.signInWithOtp({
+   email,
+   options: {
+   shouldCreateUser: false,
+   emailRedirectTo: window.location.origin + '/portal',
+   },
+   })
+
+   Sent state: 'Check your email' and 'We sent a link to [address]'.
+
+  FILE src/app/portal/page.tsx
+   Add 'use client'. Guard: no session redirects to /.
+   Read user_profiles for the signed-in user to obtain client_id.
+   Render a placeholder heading for now.
+
+Done when
+
+                                                           30
+Aethon - Build Guide​                                                                                               v1.0
+
+  •​ npm run dev serves the sign-in page at localhost:3000
+  •​ Requesting a link with a family test address sends a real email
+  •​ Following the link lands on /portal
+  •​ Visiting /portal without a session redirects to the sign-in page
+
+8.2 Family dashboard
+ Prerequisites          8.1 complete                                      Time                    Cost
+                                                                          4 hours                 None
+The single screen a family member opens. It answers the questions they would otherwise telephone the service to ask.
+
+  CLAUDE CODE PROMPT 8.2 - family dashboard
+
+  FILE src/app/portal/page.tsx
+
+  Fetch in parallel: the client record, active medications, today's
+  medication acknowledgements, the most recent health_log, the last 14
+  health_logs, and the three most recent visit_notes.
+
+  Layout max-w-[640px] mx-auto px-4 py-6.
+
+  HEADER:
+   'How [first name] is doing' text-2xl font-medium text-[#085041].
+   Today's date, text-sm text-gray-400.
+
+  Each card: bg-white rounded-2xl p-4 mb-4 shadow-sm with a border-l-4.
+
+  MEDICATION, border-[#1D9E75]:
+   'Medications today' text-lg font-medium.
+   Each medication with name, dose and a status mark: taken, due,
+   or not taken.
+   Footer text-xs text-gray-400 italic:
+   'Reference only. Not a medication administration record.'
+
+  WELLBEING, border-[#534AB7]:
+   'Recent wellbeing' text-lg font-medium.
+   Fourteen dots, one per day, coloured by that day's mood using the
+   same bands as the mobile application. No entry renders as a light
+   grey outline. Day initials beneath.
+   If today has an entry, show the matching face large above the row.
+
+  VISITS, border-[#185FA5]:
+   'Recent visits' text-lg font-medium.
+   For each of the three most recent notes show ONLY the date, the visit
+   type, and which tasks were completed.
+   Never render the transcript.
+   If none: 'No recent visits recorded.'
+
+  GOALS, border-[#BA7517], only if the client has independence goals
+  with family visibility enabled:
+   'What matters to [first name]' text-lg font-medium.
+   The goals as plain text at text-base. No progress indicator of any
+   kind, no tick, no percentage.
+
+  A 'Sign out' link at the foot of the page, text-sm text-gray-400.
+
+The transcript boundary is a product decision, not a technical one. Do not relax it for a demonstration. Families see
+that a visit happened, what type it was and what was done. The carer's own words stay between the carer and the
+clinical record.
+
+Done when
+  •​ The dashboard renders every card for the demonstration client
+  •​ Medication status matches what was recorded on the device
+  •​ No transcript text is reachable anywhere in the web application
+  •​ Goals appear only when family visibility is enabled
+  •​ The layout is usable on a phone browser at 375px wide
+
+                                                                31
+Aethon - Build Guide​                                                                                         v1.0
+
+8.3 Messaging
+ Prerequisites          8.2 complete                                          Time                     Cost
+                                                                              3 hours                  None
+Lets a family member send a message or photograph that appears on the resident's device, and shows them when it
+has been seen.
+
+  CLAUDE CODE PROMPT 8.3 - messaging
+
+  WEB, added to the portal page below the cards:
+
+   'Send a message' heading.
+   Textarea, three rows, text-base, border, rounded-xl, p-3, w-full.
+   An optional image input. On selection upload to the Supabase media
+   bucket and retain the public URL.
+   Send button, w-full h-12 bg-[#1D9E75] text-white rounded-xl.
+
+   On send insert into messages { client_id, sender_id, sender_name,
+   sender_role 'family', body, image_url }. Clear the form and show
+   'Sent' for two seconds.
+
+   Below, the five most recent messages from this sender, each with a
+   relative timestamp and a status: 'Seen' once acknowledged_at is set,
+   otherwise 'Sent'.
+
+   Subscribe to UPDATE on messages so the status changes live.
+
+  MOBILE, FILE src/hooks/useMessages.ts:
+
+   export function useMessages(clientId: string) {
+   const [messages, setMessages] = useState<any[]>([])
+   useEffect(() => {
+   supabase.from('messages').select('*')
+   .eq('client_id', clientId)
+   .is('acknowledged_at', null)
+   .order('created_at', { ascending: false })
+   .limit(5)
+   .then(({ data }) => setMessages(data ?? []))
+
+   const channel = supabase.channel('messages-' + clientId)
+   .on('postgres_changes',
+   { event: 'INSERT', schema: 'public', table: 'messages',
+   filter: 'client_id=eq.' + clientId },
+   ({ new: m }) => setMessages(prev => [m, ...prev]))
+   .subscribe()
+
+   return () => { supabase.removeChannel(channel) }
+   }, [clientId])
+   return messages
+   }
+
+  The resident-facing message card is built in increment 10.3.
+
+Done when
+  •​ A message sent from the browser is stored with the correct sender role
+  •​ An uploaded image is stored and its URL persisted
+  •​ The status changes from Sent to Seen within two seconds of acknowledgement
+  •​ The subscription is removed when the component unmounts
+
+8.4 Deployment
+ Prerequisites          8.3 complete                                          Time                     Cost
+                                                                              1 hour                   None
+
+  32.​      Initialise a git repository in the aethon-web directory and push it to a private repository.
+  33.​      Open vercel.com, sign in with the same account, and import the repository.
+  34.​      Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY when prompted.
+  35.​      Deploy. The resulting URL is the family portal address.
+
+                                                              32
+Aethon - Build Guide​                                                                                           v1.0
+
+  36.​     In Supabase, open Authentication then URL Configuration and add the deployed URL to the redirect allow
+     list.
+
+Done when
+  •​ The portal is reachable at a public URL
+  •​ Sign-in works from a phone browser on mobile data rather than local wifi
+  •​ The redirect returns to the deployed URL rather than localhost
+
+                                                             33
+Aethon - Build Guide​                                                                                                v1.0
+
+CHAPTER 9
+
+Facility Overview
+
+Two increments giving a service coordinator or facility manager a live operational picture. This is the view that answers
+whether everyone has been seen today and what needs attention, without telephoning anyone.
+
+9.1 Overview dashboard
+ Prerequisites          Chapter 8 complete                                  Time                    Cost
+                                                                            4 hours                 None
+
+   CLAUDE CODE PROMPT 9.1 - overview dashboard
+
+   FILE src/app/overview/page.tsx in the aethon-web project.
+   Add 'use client'. Guard: no session, or a role other than management,
+   redirects to /.
+
+   Layout max-w-[900px] mx-auto px-4 py-6.
+
+   HEADER:
+    'Client overview' text-2xl font-medium text-[#085041].
+    Date and time, refreshed each minute.
+
+   SUMMARY, four cards in a responsive grid, gap-4 mb-6:
+    Total clients | Seen today | Open escalations | Notes this week
+    Card bg-white rounded-xl p-4. Value text-3xl font-medium,
+    label text-sm text-gray-500.
+
+   TABLE, w-full text-sm, header bg-gray-800 text-white:
+    Columns: Client, Care stage, Last visit, Seen today, Open escalations,
+    Notes (7d).
+    Row background: an open escalation renders bg-red-50 with a 4px left
+    border; not seen today after 14:00 local renders bg-amber-50;
+    otherwise alternate white and bg-gray-50.
+
+     Selecting a row expands it in place to show the three most recent
+     visits as date, visit type and completed tasks. Never the transcript.
+
+   The care stage column is what makes this more than a rota view: a
+   coordinator can see the distribution of their caseload across the
+   three stages at a glance.
+
+Done when
+  •​ Only a management account can reach the page
+  •​ The four summary figures are correct against the database
+  •​ Row colouring follows the stated rules
+  •​ Expanding a row never reveals transcript text
+
+9.2 Live updates
+ Prerequisites          9.1 complete                                        Time                    Cost
+                                                                            2 hours                 None
+
+   CLAUDE CODE PROMPT 9.2 - live updates
+
+   Add to the overview page:
+
+     supabase.channel('overview')
+     .on('postgres_changes',
+     { event: 'INSERT', schema: 'public', table: 'visit_notes' },
+     p => markSeen(p.new.client_id))
+     .on('postgres_changes',
+     { event: 'UPDATE', schema: 'public', table: 'clients' },
+     p => updateStage(p.new.id, p.new.care_stage))
+     .subscribe()
+
+   Refetch everything every five minutes as a fallback, so a dropped
+
+                                                            34
+Aethon - Build Guide​                                                      v1.0
+
+   socket does not leave the page silently stale.
+
+   Show the last refresh time in the header at text-xs text-gray-400.
+
+Done when
+  •​ Recording a note on the device updates the dashboard within seconds
+  •​ Changing a care stage updates the corresponding row
+  •​ The page recovers after the network is interrupted and restored
+  •​ The last refresh time is visible and accurate
+
+                                                           35
+Aethon - Build Guide​                                                                                                     v1.0
+
+CHAPTER 10
+
+Resident Application
+
+Five increments producing the application the person themselves uses. Every screen in this chapter follows the
+accessibility constraints from section 1.4 without exception: 22pt minimum text, 80 point minimum targets, no swipe
+gestures, no hidden navigation.
+
+This chapter serves objective one most directly. It is also the least certain part of the product, which is why it is built
+after the carer tools rather than before them.
+
+10.1 Resident onboarding
+ Prerequisites          Chapter 3 complete                                    Time                     Cost
+                                                                              3 hours                  None
+A five step first-run sequence. It must be completable unaided by someone in their eighties who has not used an
+application before.
+
+  CLAUDE CODE PROMPT 10.1 - resident onboarding
+
+  In RootNavigator, a resident with no 'onboarding_complete' flag in
+  AsyncStorage routes to this flow.
+
+  FILE src/screens/onboarding/ResidentOnboarding.tsx
+
+  RULES for every screen in this file:
+   No text below 22pt. No tappable element below 80 points.
+   A 'Skip' control at top right on every step except the last.
+   Progress dots at the top, filled COLORS.primary for completed.
+
+  STEP 1 - Welcome
+   Full bleed COLORS.primary. 'AETHON' at 46pt bold white, centred.
+   'Welcome' at 26pt white.
+   Button 'Get started', white background, COLORS.primary text, height 80.
+
+  STEP 2 - Name
+   White. 'What is your name?' at 28pt bold, centred.
+   TextInput fontSize 28, height 76, 2px COLORS.primary border,
+   borderRadius 12, textAlign center, prefilled from user_profiles.
+   Button 'That is my name'. On advance update user_profiles.name.
+
+  STEP 3 - Reminders
+   Bell glyph 76pt COLORS.primary.
+   'Shall we remind you about your medication?' at 26pt bold.
+   'A gentle reminder at the right time each day.' at 20pt.
+   Button 'Yes, remind me' height 80:
+   await notifee.requestPermission()
+   const token = await messaging().getToken()
+   save it to user_profiles.push_token
+   Button 'Not now', outlined, height 68.
+
+  STEP 4 - Assistance contacts
+   'Who should we contact if you need help?' at 26pt bold.
+   Read clients.emergency_contacts and render each as a card:
+   name 24pt bold, relationship 20pt, telephone 20pt.
+   Explanation at 20pt: 'If you use the assistance button, we contact
+   them.'
+   Small print at 16pt COLORS.textMuted italic:
+   'This is not an emergency service. In an emergency call 144.'
+   Button 'These are correct'.
+
+  STEP 5 - Done
+   COLORS.primary. White tick in a 110px circle.
+   'Aethon is ready' at 32pt bold white.
+   Button 'Open Aethon', white, height 80.
+   AsyncStorage.setItem('onboarding_complete', 'true')
+
+Done when
+  •​ Every step is completable with one hand and no instruction
+
+                                                              36
+Aethon - Build Guide​                                                                                                v1.0
+
+  •​ Every control is at least 80 points tall
+  •​ Skipping any step still reaches the end without error
+  •​ The emergency services line appears on step four
+
+10.2 Independence goals
+ Prerequisites          10.1 complete                                          Time                    Cost
+                                                                               2 hours                 None
+Three lines in the person's own words describing what they want to keep being able to do. This is the only place in the
+system where the resident's own voice is recorded, and it changes how the record reads for everyone else.
+
+Rules
+  •​ Goals are stored verbatim. Staff never edit a resident's words.
+  •​ Goals are never marked achieved, failed, at risk or lost. There is no state and no progress indicator.
+  •​ If a goal becomes unsafe, that is a conversation between people. The application does not flag it, warn about it or
+     grey it out.
+  •​ If a goal is already unachievable when written, leave it. It still says what matters to that person.
+  •​ Each goal carries a separate family visibility control, off by default.
+
+  CLAUDE CODE PROMPT 10.2 - independence goals
+
+  Insert a step between steps four and five of the onboarding flow.
+  Renumber the progress dots to six.
+
+  STEP 5 - What matters to you
+   'What do you want to keep doing yourself?' at 26pt bold, centred.
+   'There are no wrong answers.' at 20pt COLORS.textSecond.
+
+   Three TextInputs stacked, each height 72, fontSize 22, 1.5px
+   COLORS.border, borderRadius 12, padding 14, marginBottom 12.
+   Greyed example placeholders, phrased as examples not instructions:
+   'Cook my own dinner'
+   'Get to the market on Thursdays'
+   'Look after my own tablets'
+
+   Beneath each, a small toggle at 16pt: 'My family can see this'.
+   Default off.
+
+   Button 'Save', COLORS.primary, height 80.
+   Store non-empty entries in clients.independence_goals as an array of
+   { text, family_visible } objects.
+
+  SHOW THEM BACK in three places. A goal recorded and never mentioned
+  again is worse than not asking.
+
+   1. Resident home - a card at the foot, heading 'What matters to you',
+   goals listed at 22pt. No indicator of any kind.
+   2. Carer profile tab - a card near the top, heading 'In her own
+   words', above the medication card. The order is deliberate.
+   3. Family portal - same card, but only goals with family_visible set.
+
+Done when
+  •​ A resident can record goals and skip the step entirely
+  •​ Goals appear in all three places with the correct filtering
+  •​ The carer sees the goals above the medication card
+  •​ No goal displays a progress state, tick or warning
+  •​ The family visibility toggle defaults to off and is honoured
+
+10.3 Daily summary
+ Prerequisites          10.2 complete                                          Time                    Cost
+
+                                                                37
+Aethon - Build Guide​                                                                                            v1.0
+
+                                                                            4 hours             None
+The screen the person opens each day. It shows the day at a glance and nothing else. There is no menu, no navigation
+drawer and nothing to learn.
+
+  CLAUDE CODE PROMPT 10.3 - daily summary
+
+  FILE src/screens/resident/ResidentHomeScreen.tsx
+
+  Enforce in code:
+   const MIN_FONT = 22
+   const MIN_TAP = 80
+
+  Fetch in parallel on mount: the client record, active medications,
+  today's acknowledgements, unacknowledged messages, and the current
+  consecutive-day count of complete medication acknowledgement.
+
+  ScrollView with paddingBottom 110 to clear the fixed control.
+
+  HEADER, COLORS.primary, paddingTop safe area plus 24, padding 24:
+   Greeting by hour with first name at 36pt bold white.
+   Full date at 22pt white 0.85.
+
+  COMPONENT src/components/Card.tsx: props accentColor and children.
+   White, borderRadius 14, marginBottom 16, borderLeftWidth 5,
+   padding 18, light shadow.
+
+  MEDICATION CARD, accent COLORS.primary:
+   'Your medications today' at 24pt bold COLORS.primaryDark.
+   A streak indicator if three or more consecutive days: a pale pill
+   reading '[n] days in a row' at 18pt.
+   Each medication is a control of height 80: name at 26pt bold,
+   dose at 20pt COLORS.textMuted, and a status mark at 34pt on the
+   right. Opens the acknowledgement screen.
+   When all are acknowledged: 'All done today' at 22pt COLORS.primary.
+   Footer at 15pt COLORS.textMuted italic:
+   'Reference only. Not a medication administration record.'
+
+  MESSAGES CARD, accent COLORS.blue:
+   'Messages from your family' at 24pt bold.
+   Each message: sender at 22pt bold, body at 20pt with lineHeight 28,
+   image at 180px height with borderRadius 10 if present.
+   An acknowledgement control 80 by 80, COLORS.dangerLight background,
+   borderRadius 40, heart glyph 32pt COLORS.danger. On press set
+   acknowledged_at and render the glyph grey and disabled.
+   Empty: 'No new messages' at 20pt COLORS.textMuted.
+
+  WELLBEING CARD, accent COLORS.blue:
+   'How are you today?' at 24pt bold.
+   Five faces in a row, 76 by 76. Tapping one writes a health_logs row
+   with that mood immediately and replaces the row with 'Thank you' at
+   22pt COLORS.primary. One tap only; the full form is not used here.
+
+  GOALS CARD, accent COLORS.amber, if goals exist:
+   'What matters to you' at 24pt bold, goals at 22pt.
+
+  ASSISTANCE CONTROL, position absolute, bottom safe area plus 16,
+  left 16, right 16:
+   Height 80, COLORS.danger, borderRadius 14.
+   Centred row: telephone glyph 30pt white, then 'I need help' at
+   26pt bold white. Opens the confirmation built in 10.5.
+
+Done when
+  •​ The screen is readable at arm's length without spectacles
+  •​ Every tappable element is at least 80 points tall
+  •​ Acknowledging a message updates the family portal within two seconds
+  •​ The medication reference line is present
+  •​ No swipe gesture is required anywhere on the screen
+
+10.4 Medication reminders
+
+                                                          38
+Aethon - Build Guide​                                                                                              v1.0
+
+ Prerequisites          10.3 complete                                     Time                   Cost
+                                                                          3 hours                None
+Schedules a local notification for each medication time and provides the screen for recording that a dose was taken or
+skipped.
+
+  CLAUDE CODE PROMPT 10.4 - reminders and acknowledgement
+
+  FILE src/lib/notifications.ts
+
+   import notifee, { AndroidImportance, TriggerType,
+   RepeatFrequency } from '@notifee/react-native'
+   import messaging from '@react-native-firebase/messaging'
+
+   export async function setupNotifications(userId: string) {
+   await notifee.createChannel({ id: 'medication',
+   name: 'Medication reminders',
+   importance: AndroidImportance.HIGH })
+   await notifee.createChannel({ id: 'messages', name: 'Messages',
+   importance: AndroidImportance.DEFAULT })
+   await notifee.requestPermission()
+   const token = await messaging().getToken()
+   await supabase.from('user_profiles')
+   .update({ push_token: token }).eq('id', userId)
+   }
+
+   export async function scheduleReminders(medications: any[]) {
+   const existing = await notifee.getTriggerNotifications()
+   for (const n of existing) {
+   if (n.notification.data?.type === 'medication') {
+   await notifee.cancelNotification(n.notification.id!)
+   }
+   }
+   for (const med of medications) {
+   for (const time of (med.times || [])) {
+   const [h, m] = time.split(':').map(Number)
+   await notifee.createTriggerNotification(
+   { id: `med_${med.id}_${time}`,
+   title: 'Time for your medication',
+   body: `${med.drug_name} - ${med.dose}`,
+   data: { type: 'medication', medicationId: med.id },
+   android: { channelId: 'medication' } },
+   { type: TriggerType.TIMESTAMP,
+   timestamp: nextOccurrence(h, m),
+   repeatFrequency: RepeatFrequency.DAILY })
+   }
+   }
+   }
+
+   function nextOccurrence(h: number, m: number): number {
+   const t = new Date()
+   t.setHours(h, m, 0, 0)
+   if (t <= new Date()) t.setDate(t.getDate() + 1)
+   return t.getTime()
+   }
+
+  FILE src/screens/resident/AcknowledgeScreen.tsx
+   Route parameters: { medication }
+
+   Full screen white. Back control top left.
+   Drug name at 36pt bold COLORS.primaryDark, centred.
+   Dose at 28pt COLORS.textSecond.
+   'Scheduled for [time]' at 22pt COLORS.textMuted.
+
+   Two controls side by side, each flex 1, height 110, margin 8:
+   'I took it' - COLORS.primary, tick glyph 40pt white above
+   22pt bold white text.
+   'I skipped it' - COLORS.surfaceAlt, 2px border, cross glyph and
+   text in COLORS.textMuted.
+
+   On either: insert into medication_acks { medication_id, client_id,
+   status }. Then a full screen overlay with a white circle 130px
+   containing the matching glyph and 'Recorded' at 30pt bold,
+   dismissing after 1500ms.
+
+  Call setupNotifications on sign-in and scheduleReminders once the
+  medication list has loaded.
+
+                                                            39
+Aethon - Build Guide​                                                                                             v1.0
+
+Done when
+  •​ A reminder fires at the scheduled time with the correct medication
+  •​ Tapping the notification opens the acknowledgement screen directly
+  •​ Both controls write a row and show the confirmation
+  •​ Reminders survive an application restart
+  •​ Changing the medication list reschedules without duplicates
+
+10.5 Assistance request
+ Prerequisites          10.4 complete                                     Time                   Cost
+                                                                          3 hours                None
+A single control that contacts the person's chosen contacts, choosing between them by time of day and escalating if
+the first does not respond.
+
+  CLAUDE CODE PROMPT 10.5 - assistance request
+
+  FILE src/screens/resident/AssistanceModal.tsx
+
+   Modal, transparent, fade animation. Backdrop rgba(0,0,0,0.65).
+   White card, width 90%, borderRadius 20, padding 28.
+
+   Warning glyph 56pt COLORS.danger, centred.
+   'Send a request for help?' at 28pt bold, centred.
+   Contact line at 20pt COLORS.textSecond, centred:
+   If the hour is 22 or later, or before 8, use the priority two
+   contact and prefix with 'It is night time.' Otherwise priority one.
+   'We will contact [name] now.'
+   Small print at 16pt COLORS.textMuted italic, centred:
+   'This is not an emergency service. In a medical emergency call 144.'
+
+   Button 'Yes, I need help', COLORS.danger, height 80, 24pt bold white.
+   Button 'No, I am fine', outlined, height 68, marginTop 12.
+
+  FILE src/lib/assistance.ts
+
+   export async function requestAssistance(clientId: string) {
+   const { data: client } = await supabase.from('clients')
+   .select('name, emergency_contacts').eq('id', clientId).single()
+   if (!client) return { ok: false }
+
+   const hour = new Date().getHours()
+   const night = hour >= 22 || hour < 8
+   const contacts = client.emergency_contacts as any[]
+   const primary = contacts.find(c => c.priority === (night ? 2 : 1))
+   ?? contacts[0]
+
+   const { data: request } = await supabase.from('assistance_requests')
+   .insert({ client_id: clientId,
+   contacted_name: primary.name,
+   contacted_phone: primary.phone,
+   escalation_level: 1 }).select().single()
+
+   let delivered = false
+   if (primary.push_token) {
+   const res = await fetch('https://exp.host/--/api/v2/push/send', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+   to: primary.push_token,
+   title: client.name + ' has asked for help',
+   body: 'Tap to acknowledge.',
+   data: { type: 'assistance', requestId: request?.id, clientId },
+   }),
+   })
+   delivered = res.ok
+   }
+
+   setTimeout(async () => {
+   const { data: check } = await supabase
+   .from('assistance_requests').select('acknowledged_at')
+   .eq('id', request?.id).single()
+   if (!check?.acknowledged_at) {
+
+                                                           40
+Aethon - Build Guide​                                                                                                 v1.0
+
+   const next = contacts.find(c => c.priority === 2) ?? contacts[0]
+   await supabase.from('assistance_requests').insert({
+   client_id: clientId,
+   contacted_name: next.name,
+   contacted_phone: next.phone,
+   escalation_level: 2,
+   })
+   }
+   }, 3 * 60 * 1000)
+
+   return { ok: true, delivered, contactName: primary.name }
+   }
+
+  AFTER SENDING, report the actual result:
+   delivered 'We have contacted [name].' at 24pt.
+   not delivered 'We could not reach [name] through the app. Please
+   telephone them, or call 144 in an emergency.'
+   at 24pt COLORS.danger.
+
+  Never tell the person help is coming when the notification failed.
+
+Report delivery honestly. If the notification did not send, the person must be told so and given the alternative. A false
+reassurance on this screen is the most damaging single failure the product can produce.
+
+Done when
+  •​ The confirmation names the correct contact for the time of day
+  •​ The emergency services line appears on the confirmation
+  •​ A request delivers a notification to a second device within ten seconds
+  •​ A failed delivery shows the honest message rather than a confirmation
+  •​ An unacknowledged request escalates to the second contact after three minutes
+
+                                                            41
+Aethon - Build Guide​                                                                                          v1.0
+
+CHAPTER 11
+
+Release
+
+Four increments that take the application from feature complete to usable by someone who has never seen it and has
+nobody sitting next to them.
+
+11.1 Loading, error and empty states
+ Prerequisites          Chapters 4 to 10 complete                       Time                   Cost
+                                                                        3 hours                None
+
+   CLAUDE CODE PROMPT 11.1 - shared states
+
+   CREATE three components:
+
+   src/components/LoadingView.tsx
+    Props: message?: string
+    flex 1, centred. ActivityIndicator size large COLORS.primary.
+    Optional message at 17pt COLORS.textMuted, marginTop 16.
+
+   src/components/ErrorView.tsx
+    Props: message: string, onRetry: () => void
+    Icon 64pt COLORS.danger. Message at 18pt centred.
+    Button 'Try again', COLORS.primary, height 52, width 180.
+
+   src/components/EmptyView.tsx
+    Props: icon, message, detail?
+    Icon 72pt COLORS.border. Message at 18pt COLORS.textMuted centred.
+    Optional detail at 15pt beneath.
+
+   APPLY to every screen that fetches. Wrap every Supabase call in
+   try and catch, rendering ErrorView on failure.
+
+   Specific empty states:
+    Client list 'No clients found'
+    Notes tab 'No notes recorded yet'
+    Trends card 'No observations recorded yet'
+    Messages card 'No new messages'
+    Handover 'No visits recorded this shift'
+
+   No screen may render blank while loading.
+
+Done when
+  •​ Every screen shows a loading state while fetching
+  •​ Disabling the network mid-use produces error states, not crashes
+  •​ Every list has an empty state
+  •​ Retrying after restoring the network recovers without a restart
+
+11.2 Accessibility pass
+ Prerequisites          11.1 complete                                   Time                   Cost
+                                                                        2 hours                None
+
+   CLAUDE CODE PROMPT 11.2 - accessibility audit
+
+   Review every file under src/screens and src/components and correct
+   any violation of the following.
+
+   TYPE:
+    Resident and onboarding screens: no fontSize below 22. Primary text
+    such as a greeting or a medication name at 26 or above.
+    Carer, family and management screens: no fontSize below 15.
+
+   TARGETS:
+    Any control on a resident screen: height or minHeight at least 80.
+    Any control elsewhere: at least 52.
+
+                                                             42
+Aethon - Build Guide​                                                                                                    v1.0
+
+   GESTURES:
+    No swipe, long press or drag is required to reach any function on a
+    resident screen. Every action has a visible control.
+
+   SIGN OUT:
+    Every top level screen has a visible sign out control.
+
+   REQUIRED TEXT - confirm each appears where specified:
+    Medication cards, resident and family:
+    'Reference only. Not a medication administration record.'
+    Assistance confirmation and onboarding step four:
+    'This is not an emergency service. In a medical emergency call 144.'
+    Handover screen and export footer:
+    'Care coordination summary. Not an official medical record.'
+    Escalation summary:
+    'Generated by Aethon, a care coordination tool. This is not a
+    clinical alerting system.'
+
+   THRESHOLDS:
+    Search for any comparison against a numeric constant that determines
+    what is rendered. There must be none outside the pain and mood band
+    colouring, which maps a recorded value to a colour rather than
+    evaluating it.
+
+   List every change made and the file it was made in.
+
+Done when
+  •​ No resident-facing text below 22pt remains
+  •​ No resident-facing control below 80 points remains
+  •​ All four required sentences are present
+  •​ The threshold search returns only the documented band colouring
+
+11.3 TestFlight distribution
+ Prerequisites          11.2 complete                                          Time                  Cost
+                                                                               2 hours               None
+
+  37.​      Increment the build number in Xcode.
+  38.​      Set the destination to Any iOS Device and choose Product, then Archive.
+  39.​      In the Organizer choose Distribute App, App Store Connect, Upload.
+  40.​      Wait for processing in App Store Connect, typically five to fifteen minutes.
+  41.​     Add external testers by email address. The first external build requires a brief automated review, usually
+     cleared the same day.
+  42.​     Testers receive an invitation, install TestFlight, then install Aethon. Subsequent builds appear as updates
+     with no new invitation.
+
+Use the application yourself for a full day before giving it to anyone else. Record at least ten notes, complete a shift,
+export a handover. The first impression a tester forms is the only first impression available, and a crash on the first day
+generally ends the trial.
+
+Done when
+  •​ The current build is installable from TestFlight
+  •​ A tester who has never seen the application can install it from the email unaided
+  •​ You have used the build for a full day without a crash
+
+11.4 Demonstration
+ Prerequisites          11.3 complete                                          Time                  Cost
+                                                                               1 hour                None
+A six part sequence that shows the product without requiring narration. Rehearse it once; it should run in about ten
+minutes.
+
+                                                              43
+Aethon - Build Guide​                                                                                                             v1.0
+
+ Part                      Duration       What to show
+
+ 1 - The problem           1 min          Do not open the application. Ask when their carers write their visit notes.
+
+ 2 - Capture               2 min          Open as a carer, select a client, record fifteen seconds, show the transcript appear.
+
+ 3 - Handover              2 min          End the shift. Show the assembled handover. Copy it as text.
+
+ 4 - The record            2 min          Open a client profile. Show the baseline, the care stage history and the observation
+                                          trends.
+
+ 5 - Family                2 min          Open the portal in a browser. Send a message. Show it arrive on the device.
+
+ 6 - Overview              1 min          Open the overview dashboard. Point at the care stage column and the seen-today
+                                          column.
+
+Done when
+  •​ The full sequence runs without preparation on the day
+  •​ Every part works on a fresh install with demonstration data
+  •​ Someone unfamiliar with the product can explore it for five minutes without narration
+
+                                                              44
+Aethon - Build Guide​                                                                                                          v1.0
+
+CHAPTER 12
+
+Beyond the Minimum Viable Product
+
+The build specified in this document is the entry point, not the destination. This chapter sets out what comes next and
+what each addition requires before it can be started.
+
+12.1 Direction
+The product's long-term position is the continuous record. Every existing product in this market serves one stage of
+care and stops at its boundary. A person moving from independent living to home care to residential care currently
+arrives at each stage with nothing, and the receiving organisation rebuilds the picture from scratch.
+
+Aethon accumulates that picture from the first day a person joins, and carries it across every transition. The baseline,
+the observation history, the care stage record and the person's own stated priorities travel with them. That record
+becomes more valuable the longer it runs, which is the opposite of most software in this sector.
+
+Three consequences follow from that position, and they set the priority order for everything below.
+
+  •​ The record must never be locked to one organisation. A person changing service provider takes their record with
+     them.
+  •​ Longitudinal data accumulates value with time, so recording begins before there is any use for it. That is why the
+     baseline and care stage exist in the minimum build.
+  •​ The eventual commercial position rests on outcomes over time, not on features. Features are how the record gets
+     populated.
+
+12.2 Next increments
+ Addition                What it does                                                          Required first
+
+ Exercise adherence      Carries a physiotherapist's prescribed strength and balance           A physiotherapy partner to
+                         programme between visits, with a daily prompt and a streak.           prescribe. The application must
+                         Strength and balance training has the strongest evidence base of      not itself assess, prescribe or
+                         any intervention that extends independent living, and adherence       progress difficulty.
+                         to home programmes is its weakest link.
+
+ Monthly capability      Seven everyday capabilities recorded monthly by the carer,            Six months of care stage data to
+ record                  prefilled from the previous month so an unchanged month is nine       establish that carers maintain a
+                         taps. Produces the trajectory that makes forecasting possible.        recurring record at all.
+
+ Local services          A vetted list of local providers for the practical tasks that erode   A vetted supplier list and a
+ directory               independence but do not require care. Listing only, no booking.       position on liability for
+                                                                                               recommendations.
+
+ Carer burden check      One periodic question in the family portal. The decision to move to   Family portal usage sufficient for
+                         residential care is frequently made by an exhausted family            a periodic question to be seen.
+                         member rather than by a clinician.
+
+ Facility mode           Extends the record into residential care: room based rounds, shift    A facility customer. The
+                         patterns, and the receiving view of an arriving resident's history.   requirements differ enough
+                                                                                               from home care that building
+                                                                                               speculatively is wasteful.
+
+ Record portability      Export and import of a complete person record between                 A second organisation to
+                         organisations in a documented format.                                 exchange with.
+
+ Outcome reporting       Aggregate care stage trajectories with baseline matching, for         Eighteen months of care stage
+                         service and payer reporting.                                          history across a meaningful
+                                                                                               number of people.
+
+                                                                45
+Aethon - Build Guide​                                                                                                              v1.0
+
+12.3 Deliberately unresolved
+Three questions have no answer within this build and should not be presented as though they do.
+
+ Question                               Position
+
+ Does the product measurably defer      Not demonstrable without a comparison group and eighteen to twenty-four months of
+ the move to residential care?          history. The baseline fields recorded at enrolment exist so that a matched comparison
+                                        becomes possible later. Until then this is an objective, not a claim.
+
+ Does the application itself extend     Only record it, at present. Everything that extends independent living is delivered by a
+ independence, or only record it?       person: a physiotherapist, a pharmacist, an occupational therapist, a general
+                                        practitioner. The application's contribution is to surface change early enough that a
+                                        person can act, and to carry professional instructions between visits.
+
+ How accurate is transcription across   Determined empirically per deployment in increment 5.2. It varies enough between
+ regional speech?                       speakers that a general answer would be misleading.
+
+                                                                46
+Aethon - Build Guide​                                                                                                      v1.0
+
+APPENDIX A
+
+Compliance Track (Optional)
+
+This appendix is a parallel track, not a prerequisite. Nothing in chapters 2 to 11 depends on it, and the build can be
+completed without touching it.
+
+It becomes necessary at a specific point: when a person who is not a consenting test participant relies on the software.
+Until then it is preparation. The work is roughly two days spread over three weeks, most of which is waiting for an
+appointment.
+
+A.1 When this becomes required
+ Situation                                 Position
+
+ Building and testing alone                Not required.
+
+ A colleague or friend testing with        Not required.
+ fictional data
+
+ A professional carer testing with real    Required before starting. Consent and a data processing position are the minimum.
+ client data
+
+ Any person relying on a reminder or an    Required. This is the point at which an expectation of care is created.
+ assistance request
+
+ Any paid deployment                       Required, complete, and reviewed by a qualified person.
+
+A.2 Statement of intended purpose
+ Prerequisites          None                                                     Time                       Cost
+                                                                                 3 to 4 hours               None
+A one-page document stating what the software is for. Classification under medical device regulation follows from
+intended purpose and actual function, not from disclaimers placed in the interface. This document is what a qualified
+reviewer will ask for first.
+
+Contents
+  43.​     A single sentence of purpose. For example: Aethon is a care coordination and documentation tool
+     supporting people who wish to continue living independently at home. It records observations made by people
+     and makes them visible to others involved in the same person's care, so that support can be arranged in good
+     time.
+  44.​    An explicit list of what the software does not do. It does not diagnose. It does not recommend treatment. It
+     does not monitor physiological signs. It does not detect falls. It does not replace emergency services. It does not
+     make or influence clinical decisions.
+  45.​    The intended user groups, named: professional carers, family members, service coordinators, and the
+     person receiving care.
+  46.​    One line per feature explaining why it is not a device function. For example: medication list - displays a
+     schedule entered by a person, performs no dose calculation and no interaction checking.
+  47.​       A version number, a date and an author. This document will be revised; keep the history.
+
+The wording carries the weight. So that support can be arranged in good time describes coordination. So that the
+person remains independent longer is a claim about a health outcome and changes the classification. Keep the
+objective in the product description and out of this document.
+
+A.3 Data protection assessment
+
+                                                               47
+Aethon - Build Guide​                                                                                                                  v1.0
+
+ Prerequisites          A.2 drafted                                                   Time                        Cost
+                                                                                      6 to 8 hours                None
+The software processes health information, which most European data protection regimes treat as a special category
+requiring a documented assessment. Nine sections.
+
+ Section                    Content
+
+ Inventory                  Every field stored. Names, dates of birth, medications, allergies, observations, transcripts, mood and
+                            pain records, care stage history, contact details.
+
+ Purpose                    Why each field exists. Any field that cannot be justified should be removed from the schema before it is
+                            built.
+
+ Legal basis                For organisations, contractual necessity and legitimate interest. For individuals and families, explicit
+                            consent. Record which applies to which data.
+
+ Location                   Supabase, Frankfurt eu-central-1. All stored data resides in the European Union.
+
+ Processors                 Supabase for hosting and Apple for distribution. That is the complete list. Speech transcription runs on
+                            the device and involves no processor - state this explicitly, because a reviewer will expect a speech
+                            vendor and its absence is the point.
+
+ Transient data             The audio file exists in the device cache between recording and transcription. Specify that it is deleted
+                            immediately afterwards, is never written to a backup location and is never transmitted. Confirm the
+                            deletion call is present in the code.
+
+ Retention                  How long each category is kept and what triggers deletion. For a pilot, all data deleted at the end. Write
+                            it down and honour it.
+
+ Rights                     How a person exercises access, correction and deletion. A manual process is acceptable for a pilot
+                            provided it is documented and a named person owns it.
+
+ Risks                      Each identified risk with its mitigation.
+
+A.4 Review by a qualified person
+ Prerequisites          A.2 and A.3 drafted                                           Time                        Cost
+                                                                                      One week lead time, 30      Approximately CHF
+                                                                                      to 60 minutes               300 to 800
+Find a firm with a medical technology or life sciences practice and ask for a scoping conversation rather than a written
+opinion. Send both documents forty-eight hours ahead.
+
+Questions
+  48.​      Given this statement of intended purpose, is the software a medical device in this jurisdiction? If so, what
+     class?
+  49.​       Which features, if any, would change that classification?
+  50.​     Where exactly is the line between displaying an observation and making an assessment? Give me a test I
+     can apply to future features myself.
+  51.​       What is the liability position if a person relies on a reminder or an assistance request that does not deliver?
+
+The answer to the third question is the valuable one. You want a rule you can apply without a further consultation for
+every feature. Something of the form: if the software combines two or more inputs to produce a conclusion the user
+did not reach themselves, it is assessing. Write down whatever test you are given and add it to the statement of
+intended purpose.
+
+A.5 Second review before instrumentation
+ Prerequisites          A.4 complete                                                  Time                        Cost
+                                                                                      30 minutes
+
+                                                                        48
+Aethon - Build Guide​                                                                                                   v1.0
+
+                                                                                                   Approximately CHF
+                                                                                                   200 to 500
+If the feature set changes materially after the first review - particularly anything that surfaces or routes clinical
+observation - return to the same reviewer with the revised documents. A review of a documentation tool does not
+cover a product that has since added observation routing.
+
+                                                           49
+Aethon - Build Guide​                                                                  v1.0
+
+APPENDIX B
+
+Database Schema
+
+Run this once in the Supabase SQL Editor. It is idempotent and may be re-run safely.
+
+  Supabase SQL Editor
+  -- ── CLIENTS ────────────────────────────────────────────────────
+  create table if not exists clients (
+   id uuid default gen_random_uuid() primary key,
+   created_at timestamptz default now(),
+   name text not null,
+   short_code text,
+   date_of_birth date,
+   room_or_address text,
+   allergies text[] default '{}',
+   dietary_notes text,
+   physician_name text,
+   physician_email text,
+   emergency_contacts jsonb default '[]',
+   medications jsonb default '[]',
+   independence_goals jsonb default '[]',
+   -- care stage: current value plus two dates
+   care_stage text default 'independent'
+   check (care_stage in ('independent','family_supported',
+   'professionally_supported','residential')),
+   care_stage_observed_at date default current_date,
+   care_stage_estimated_since date,
+   -- baseline, captured once at enrolment
+   baseline_age int,
+   baseline_lives_alone boolean,
+   baseline_condition_count int,
+   baseline_mobility_aid text,
+   baseline_support_note text,
+   baseline_recorded_at date
+  );
+
+  -- ── CARE STAGE HISTORY ─────────────────────────────────────────
+  create table if not exists care_stage_history (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id) not null,
+   from_stage text,
+   to_stage text,
+   observed_at date default current_date,
+   estimated_since date,
+   changed_by uuid references auth.users(id),
+   note text
+  );
+
+  -- ── USER PROFILES ──────────────────────────────────────────────
+  create table if not exists user_profiles (
+   id uuid references auth.users(id) primary key,
+   role text not null
+   check (role in ('resident','family','carer','management')),
+   client_id uuid references clients(id),
+   name text,
+   push_token text,
+   created_at timestamptz default now()
+  );
+
+  -- ── SHIFTS ─────────────────────────────────────────────────────
+  create table if not exists shifts (
+   id uuid default gen_random_uuid() primary key,
+   carer_id uuid references auth.users(id),
+   carer_name text,
+   started_at timestamptz default now(),
+   ended_at timestamptz
+  );
+
+  -- ── VISIT NOTES ────────────────────────────────────────────────
+  create table if not exists visit_notes (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id) not null,
+   carer_id uuid references auth.users(id),
+   carer_name text,
+   shift_id uuid references shifts(id),
+   -- transcription
+   transcript text,
+
+                                                          50
+Aethon - Build Guide​                                                  v1.0
+
+   raw_transcript text,
+   transcription_status text default 'complete',
+   reviewed_at timestamptz,
+   was_edited boolean default false,
+   raw_length int,
+   edit_distance int,
+   -- structure
+   visit_type text,
+   tasks jsonb default '{}',
+   -- follow-up prompts
+   ask_about_hearing boolean default false,
+   ask_about_vision boolean default false,
+   ask_about_continence boolean default false,
+   -- escalation
+   physician_flagged boolean default false,
+   flag_reason text,
+   flag_outcome text,
+   flag_outcome_at timestamptz,
+   created_at timestamptz default now()
+  );
+
+  -- ── HEALTH LOGS ────────────────────────────────────────────────
+  create table if not exists health_logs (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id) not null,
+   logged_by uuid references auth.users(id),
+   mood int check (mood between 1 and 5),
+   sleep int check (sleep between 1 and 5),
+   pain int check (pain between 0 and 10),
+   weight_kg numeric,
+   notes text,
+   created_at timestamptz default now()
+  );
+
+  -- ── MEDICATIONS ────────────────────────────────────────────────
+  create table if not exists medications (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id) not null,
+   drug_name text not null,
+   dose text,
+   frequency text,
+   times text[] default '{}',
+   active boolean default true
+  );
+
+  create table if not exists medication_acks (
+   id uuid default gen_random_uuid() primary key,
+   medication_id uuid references medications(id),
+   client_id uuid references clients(id),
+   status text check (status in ('taken','skipped')),
+   acked_at timestamptz default now()
+  );
+
+  -- ── MESSAGES ───────────────────────────────────────────────────
+  create table if not exists messages (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id) not null,
+   sender_id uuid references auth.users(id),
+   sender_name text,
+   sender_role text,
+   body text,
+   image_url text,
+   acknowledged_at timestamptz,
+   created_at timestamptz default now()
+  );
+
+  -- ── ASSISTANCE REQUESTS ────────────────────────────────────────
+  create table if not exists assistance_requests (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id),
+   contacted_name text,
+   contacted_phone text,
+   escalation_level int default 1,
+   acknowledged_at timestamptz,
+   created_at timestamptz default now()
+  );
+
+  -- ── APP EVENTS ─────────────────────────────────────────────────
+  create table if not exists app_events (
+   id uuid default gen_random_uuid() primary key,
+   client_id uuid references clients(id),
+   event_type text default 'app_open',
+
+                                                        51
+Aethon - Build Guide​                                                                                               v1.0
+
+   created_at timestamptz default now()
+  );
+
+  -- ── DEVELOPMENT SECURITY POLICIES ──────────────────────────────
+  -- Permissive. Replace before any real deployment.
+  do $$ declare t text;
+  begin
+   foreach t in array array[
+   'clients','care_stage_history','user_profiles','shifts',
+   'visit_notes','health_logs','medications','medication_acks',
+   'messages','assistance_requests','app_events'
+   ]
+   loop
+   execute format('alter table %I enable row level security', t);
+   execute format(
+   'drop policy if exists dev_all on %I', t);
+   execute format(
+   'create policy dev_all on %I for all using (true)', t);
+   end loop;
+  end $$;
+
+  -- ── DEMONSTRATION CLIENT ───────────────────────────────────────
+  insert into clients (name, short_code, date_of_birth, allergies,
+   physician_name, physician_email, dietary_notes,
+   emergency_contacts, medications, baseline_age,
+   baseline_lives_alone, baseline_condition_count,
+   baseline_mobility_aid, baseline_recorded_at)
+  select 'Demonstration Client', 'DC', '1942-03-12',
+   array['Penicillin'], 'Dr Example', 'physician@example.test',
+   'Low sodium',
+   '[{"name":"Family Contact","relation":"Daughter",
+   "phone":"+41790000000","priority":1}]',
+   '[{"drug":"Ramipril","dose":"5mg","times":["08:00"]},
+   {"drug":"Metformin","dose":"500mg","times":["08:00","18:00"]}]',
+   83, true, 2, 'Walking stick', current_date
+  where not exists (select 1 from clients where short_code = 'DC');
+
+B.1 Production policies
+Replace the development policies before any deployment with real people. The pattern below restricts each role to
+the records it needs.
+
+  Production policy pattern
+  -- Drop the development policies first.
+  -- A carer sees clients they have a visit note for, or all clients
+  -- within their organisation once an organisation table exists.
+
+  create policy carer_read_clients on clients for select
+   using (
+   exists (select 1 from user_profiles p
+   where p.id = auth.uid() and p.role in ('carer','management'))
+   );
+
+  -- A resident or family member sees only their own client record.
+  create policy own_client on clients for select
+   using (
+   exists (select 1 from user_profiles p
+   where p.id = auth.uid() and p.client_id = clients.id)
+   );
+
+  -- Visit notes are readable by carers and management only.
+  create policy carer_notes on visit_notes for all
+   using (
+   exists (select 1 from user_profiles p
+   where p.id = auth.uid() and p.role in ('carer','management'))
+   );
+
+  -- Messages are readable by the client and by any user linked to them.
+  create policy client_messages on messages for all
+   using (
+   exists (select 1 from user_profiles p
+   where p.id = auth.uid() and p.client_id = messages.client_id)
+   );
+
+                                                         52
+Aethon - Build Guide​                                                                                                           v1.0
+
+APPENDIX C
+
+Effort and Cost Summary
+
+C.1 Effort by chapter
+ Chapter                                                                   Increments                     Hours
+
+ 2 - Development environment                                               4                              5
+
+ 3 - Foundation                                                            6                              12
+
+ 4 - The resident record                                                   4                              11
+
+ 5 - Carer field tools                                                     4                              12
+
+ 6 - Observation and forecasting                                           3                              8
+
+ 7 - Escalation and handover                                               3                              9
+
+ 8 - Family access                                                         4                              10
+
+ 9 - Facility overview                                                     2                              6
+
+ 10 - Resident application                                                 5                              15
+
+ 11 - Release                                                              4                              8
+
+ Total                                                                     39                             96
+
+Ninety-six hours is the working estimate for a developer using an AI coding assistant. It includes time lost to code
+signing, native module linking and notification certificates, which are the three areas that consume time no plan
+predicts.
+
+At three focused hours per working day the build takes roughly eight weeks. Chapters 2 and 3 must come first.
+Chapters 4 to 7 must follow in order. Chapters 8, 9 and 10 are independent of one another and may be reordered or
+deferred.
+
+C.2 Recurring cost
+ Item                               Cost                       Notes
+
+ Apple Developer Program            USD 99 per year            Required for device installation and TestFlight.
+
+ Supabase                           Free                       The free tier covers a pilot of this size. Paid tiers begin at
+                                                               database sizes well beyond it.
+
+ Vercel                             Free                       Free tier is sufficient for the family and overview web application.
+
+ Firebase                           Free                       Notification delivery only.
+
+ Speech transcription               Free                       Runs on the device. No per-minute charge.
+
+ Total                              USD 99 per year
+
+C.3 Optional additional cost
+ Item                                         Cost                              When
+
+ Legal review, first consultation             CHF 300 to 800                    Before any person outside the build team relies on
+                                                                                the software.
+
+                                                               53
+Aethon - Build Guide​                                                                                           v1.0
+
+ Item                                Cost                  When
+
+ Legal review, second consultation   CHF 200 to 500        If the feature set changes materially after the first.
+
+                                                      54
