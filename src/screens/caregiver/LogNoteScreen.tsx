@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useShift } from '../../context/ShiftContext';
 
@@ -25,11 +26,7 @@ export default function LogNoteScreen() {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchResidents();
-  }, [pinnedResidentIds]);
-
-  const fetchResidents = async () => {
+  const fetchResidents = useCallback(async () => {
     try {
       let query = supabase.from('residents').select('id, first_name, last_name, room_number').order('last_name', { ascending: true });
       if (pinnedResidentIds.length > 0) {
@@ -47,7 +44,13 @@ export default function LogNoteScreen() {
     } finally {
       setLoadingResidents(false);
     }
-  };
+  }, [pinnedResidentIds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchResidents();
+    }, [fetchResidents])
+  );
 
   const handleSave = async () => {
     if (!selectedResidentId) return Alert.alert('Error', 'Please select a resident.');
@@ -197,9 +200,9 @@ const styles = StyleSheet.create({
   pillTextSelected: { color: '#ffffff' },
   moodContainer: { flexDirection: 'row', gap: 12 },
   moodBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: 16, borderWidth: 2, borderColor: 'transparent' },
-  moodText: { fontSize: 14, fontWeight: '700' },
+  moodText: { fontSize: 15, fontWeight: '700' },
   micBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f5f3ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  micText: { fontSize: 12, fontWeight: '600', color: '#7c3aed' },
+  micText: { fontSize: 15, fontWeight: '600', color: '#7c3aed' },
   textInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 16, padding: 16, height: 160, fontSize: 16, color: '#0f172a' },
   footer: { paddingHorizontal: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f1f5f9', backgroundColor: '#ffffff' },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#7c3aed', paddingVertical: 16, borderRadius: 16, gap: 8 },

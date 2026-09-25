@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,8 +22,8 @@ const GEMINI_PALETTES = [
 // Flawless, perfectly smooth crossfading aura (exactly like the Gemini reference)
 function AuraFog() {
   const colorIndex = useRef(0);
-  const fadeOut = useRef(new Animated.Value(1)).current;
-  const fadeIn = useRef(new Animated.Value(0)).current;
+  const [fadeOut] = useState(() => new Animated.Value(1));
+  const [fadeIn] = useState(() => new Animated.Value(0));
 
   const [colors, setColors] = React.useState({
     current: GEMINI_PALETTES[0],
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardDesc: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#64748b',
     lineHeight: 18,
     fontWeight: '500',
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   footer: {
     textAlign: 'center',
     color: '#cbd5e1',
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 1,
   },

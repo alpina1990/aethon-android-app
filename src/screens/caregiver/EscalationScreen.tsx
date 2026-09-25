@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useShift } from '../../context/ShiftContext';
 
@@ -35,11 +36,7 @@ export default function EscalationScreen() {
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchResidents();
-  }, [pinnedResidentIds]);
-
-  const fetchResidents = async () => {
+  const fetchResidents = useCallback(async () => {
     try {
       let query = supabase.from('residents').select('id, first_name, last_name, room_number').order('last_name', { ascending: true });
       if (pinnedResidentIds.length > 0) {
@@ -57,7 +54,13 @@ export default function EscalationScreen() {
     } finally {
       setLoadingResidents(false);
     }
-  };
+  }, [pinnedResidentIds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchResidents();
+    }, [fetchResidents])
+  );
 
   const handleEscalate = async () => {
     if (!selectedResidentId) return Alert.alert('Error', 'Please select a resident.');

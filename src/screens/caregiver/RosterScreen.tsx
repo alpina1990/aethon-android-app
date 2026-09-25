@@ -1,11 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase';
+import { SignOutButton } from '../../components/SignOutButton';
+import { LoadingView } from '../../components/LoadingView';
+import { ErrorView } from '../../components/ErrorView';
+import { EmptyView } from '../../components/EmptyView';
 import { useShift } from '../../context/ShiftContext';
+import { getActiveShiftId, startShift } from '../../lib/shift';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 
 type Resident = {
@@ -15,10 +20,15 @@ type Resident = {
   room_number: string | null;
   care_stage: string;
   lastNoteAt: string | null;
+  lastNoteStatus: string | null;
+  lastNoteReviewedAt: string | null;
 };
 
-function formatLastNote(createdAt: string | null): string {
+function formatLastNote(createdAt: string | null, status: string | null, reviewedAt: string | null): string {
   if (!createdAt) return 'No notes yet';
+  if (status === 'pending') return 'Transcribing';
+  if (status === 'failed') return 'Transcription unavailable';
+  if (status === 'complete' && !reviewedAt) return 'Needs checking';
 
   const noteDate = new Date(createdAt);
   const now = new Date();
@@ -39,6 +49,7 @@ export default function RosterScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { togglePin, isPinned } = useShift();
+  const [shiftActive, setShiftActive] = useState(false);
 
   const [residents, setResidents] = useState<Resident[]>([]);
   const [search, setSearch] = useState('');
@@ -55,23 +66,28 @@ export default function RosterScreen() {
           .select('id, first_name, last_name, room_number, care_stage'),
         supabase
           .from('visit_notes')
-          .select('resident_id, created_at')
+          .select('resident_id, created_at, transcription_status, reviewed_at')
           .order('created_at', { ascending: false }),
       ]);
 
       if (residentsRes.error) throw residentsRes.error;
       if (notesRes.error) throw notesRes.error;
 
-      const lastNoteByResident = new Map<string, string>();
+      const lastNoteByResident = new Map<
+        string,
+        { created_at: string; transcription_status: string | null; reviewed_at: string | null }
+      >();
       for (const note of notesRes.data ?? []) {
         if (!lastNoteByResident.has(note.resident_id)) {
-          lastNoteByResident.set(note.resident_id, note.created_at);
+          lastNoteByResident.set(note.resident_id, note);
         }
       }
 
       const withNotes: Resident[] = (residentsRes.data ?? []).map(r => ({
         ...r,
-        lastNoteAt: lastNoteByResident.get(r.id) ?? null,
+        lastNoteAt: lastNoteByResident.get(r.id)?.created_at ?? null,
+        lastNoteStatus: lastNoteByResident.get(r.id)?.transcription_status ?? null,
+        lastNoteReviewedAt: lastNoteByResident.get(r.id)?.reviewed_at ?? null,
       }));
 
       withNotes.sort((a, b) => {
@@ -93,8 +109,19 @@ export default function RosterScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchResidents();
+      getActiveShiftId().then(id => setShiftActive(!!id));
     }, [fetchResidents])
   );
+
+  const handleShiftPress = async () => {
+    if (shiftActive) {
+      navigation.navigate('Handover');
+      return;
+    }
+    const id = await startShift();
+    if (id) setShiftActive(true);
+    else Alert.alert('Could not start shift', 'Please check your connection and try again.');
+  };
 
   const filteredResidents = residents.filter(r => {
     const fullName = `${r.first_name} ${r.last_name}`.toLowerCase();
@@ -123,7 +150,12 @@ export default function RosterScreen() {
       </View>
       <View style={styles.info}>
         <Text style={styles.name}>{res.first_name} {res.last_name}</Text>
-        <Text style={styles.details}>{formatLastNote(res.lastNoteAt)}</Text>
+        <View style={styles.detailsRow}>
+          {res.lastNoteStatus === 'complete' && !res.lastNoteReviewedAt && (
+            <View style={styles.amberDot} />
+          )}
+          <Text style={styles.details}>{formatLastNote(res.lastNoteAt, res.lastNoteStatus, res.lastNoteReviewedAt)}</Text>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -145,6 +177,12 @@ export default function RosterScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Facility Roster</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity style={styles.shiftButton} onPress={handleShiftPress}>
+            <Text style={styles.shiftButtonText}>{shiftActive ? 'End shift' : 'Start shift'}</Text>
+          </TouchableOpacity>
+          <SignOutButton />
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -159,14 +197,9 @@ export default function RosterScreen() {
       </View>
 
       {loading && !refreshing ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#0f172a" />
+        <LoadingView message="Loading clients" />
       ) : error ? (
-        <View style={styles.centeredState}>
-          <Text style={styles.errorText}>Could not load clients</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchResidents}>
-            <Text style={styles.retryButtonText}>Try again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorView message="Could not load clients" onRetry={fetchResidents} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -184,7 +217,7 @@ export default function RosterScreen() {
           }
         >
           {filteredResidents.length === 0 ? (
-            <Text style={styles.emptyText}>No clients found</Text>
+            <EmptyView icon="users" message="No clients found" />
           ) : (
             <>
               {pinnedResidents.length > 0 && (
@@ -207,12 +240,14 @@ export default function RosterScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16 },
+  header: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  shiftButton: { backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 14, height: 52, justifyContent: 'center' },
+  shiftButtonText: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
   headerTitle: { fontSize: 28, fontWeight: '800', color: '#0f172a' },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 24, paddingHorizontal: 16, height: 50, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 16 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 24, paddingHorizontal: 16, height: 52, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', marginBottom: 16 },
   searchInput: { flex: 1, marginLeft: 12, fontSize: 16, color: '#0f172a' },
   scrollContent: { paddingHorizontal: 24, paddingBottom: 100 },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginTop: 8 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12, marginTop: 8 },
   divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 16 },
 
   rosterCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 16, minHeight: 76, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0' },
@@ -220,7 +255,9 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 16, fontWeight: '700', color: '#64748b' },
   info: { flex: 1, marginLeft: 16 },
   name: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 4 },
-  details: { fontSize: 13, color: '#64748b', fontWeight: '500' },
+  detailsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  details: { fontSize: 15, color: '#64748b', fontWeight: '500' },
+  amberDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' },
   pinButton: { padding: 8, marginRight: -8 },
   starFilled: { color: '#fbbf24' },
 

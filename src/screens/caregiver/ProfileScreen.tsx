@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { supabase } from '../../lib/supabase';
@@ -47,26 +47,28 @@ export default function ProfileScreen() {
   const [biometrics, setBiometrics] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
         .single();
-        
+
       if (data) setProfile(data);
     } catch (error) {
       console.error('Error fetching profile', error);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
 
   const handleLogout = async () => {
     try {
@@ -167,8 +169,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  avatarFallback: { backgroundColor: "#f5f3ff", justifyContent: "center",
-  avatarFallbackText: { fontSize: 32, fontWeight: '800', color: '#7c3aed' },
+  avatarFallback: {
+    backgroundColor: '#f5f3ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     width: 100,
     height: 100,
     borderRadius: 50,
@@ -180,6 +184,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 16,
   },
+  avatarFallbackText: { fontSize: 32, fontWeight: '800', color: '#7c3aed' },
   name: {
     fontSize: 24,
     fontWeight: '800',
@@ -209,12 +214,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: '#166534',
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#64748b',
     textTransform: 'uppercase',
@@ -288,7 +293,7 @@ const styles = StyleSheet.create({
   },
   version: {
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: 15,
     color: '#94a3b8',
     fontWeight: '500',
     marginTop: 16,

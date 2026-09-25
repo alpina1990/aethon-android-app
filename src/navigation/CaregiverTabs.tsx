@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import CaregiverHomeScreen from '../screens/caregiver/HomeScreen';
 import AlertsScreen from '../screens/caregiver/AlertsScreen';
 import RosterScreen from '../screens/caregiver/RosterScreen';
 import ProfileScreen from '../screens/caregiver/ProfileScreen';
+import { initTranscription } from '../lib/transcription';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,6 +30,10 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export function CaregiverTabNavigator() {
+  useEffect(() => {
+    initTranscription().catch(err => console.error('Failed to load transcription model', err));
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -39,7 +44,7 @@ export function CaregiverTabNavigator() {
         tabBarHideOnKeyboard: true,
         tabBarLabelStyle: {
           fontWeight: '600',
-          fontSize: 11,
+          fontSize: 15,
         },
         tabBarStyle: {
           backgroundColor: '#ffffff',

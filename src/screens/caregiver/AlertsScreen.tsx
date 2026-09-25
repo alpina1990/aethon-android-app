@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { SignOutButton } from '../../components/SignOutButton';
+import { LoadingView } from '../../components/LoadingView';
+import { ErrorView } from '../../components/ErrorView';
 import { useShift } from '../../context/ShiftContext';
 
 export default function AlertsScreen() {
@@ -11,8 +15,11 @@ export default function AlertsScreen() {
   
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       let query = supabase
         .from('escalations')
@@ -24,19 +31,21 @@ export default function AlertsScreen() {
         query = query.in('resident_id', pinnedResidentIds);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: queryError } = await query;
+      if (queryError) throw queryError;
       setAlerts(data || []);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchAlerts();
   }, [pinnedResidentIds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAlerts();
+    }, [fetchAlerts])
+  );
 
   const dismissAlert = async (id: string) => {
     setAlerts(prev => prev.filter(a => a.id !== id));
@@ -47,10 +56,13 @@ export default function AlertsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Active Alerts</Text>
+        <SignOutButton />
       </View>
       
       {loading ? (
-        <ActivityIndicator color="#0f172a" style={{ marginTop: 40 }} />
+        <LoadingView message="Loading alerts" />
+      ) : error ? (
+        <ErrorView message="Could not load alerts" onRetry={fetchAlerts} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {alerts.length === 0 ? (
@@ -142,14 +154,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   alertType: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '700',
     color: '#ef4444',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   alertTime: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#94a3b8',
     fontWeight: '500',
   },
@@ -160,7 +172,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   alertMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#475569',
     lineHeight: 20,
     marginBottom: 16,
@@ -175,7 +187,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dismissBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#0f172a',
   },

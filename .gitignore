@@ -40,3 +40,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# speech models (large binaries — downloaded, never committed)
+/models

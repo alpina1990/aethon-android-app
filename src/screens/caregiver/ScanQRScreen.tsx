@@ -30,7 +30,7 @@ export default function ScanQRScreen() {
           <View style={styles.scanLine} />
         </View>
         <Text style={styles.scanInstructions}>
-          Align the QR code on the patient's wristband within the frame to verify identity.
+          Align the QR code on the patient&apos;s wristband within the frame to verify identity.
         </Text>
       </View>
 
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   scanInstructions: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 22,

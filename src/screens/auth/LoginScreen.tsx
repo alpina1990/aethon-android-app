@@ -7,13 +7,15 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onboardingKey } from '../../lib/resident';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 
 WebBrowser.maybeCompleteAuthSession();
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type LoginMode = 'select' | 'family' | 'caregiver';
+type LoginMode = 'select' | 'family' | 'caregiver' | 'resident';
 
 const GEMINI_PALETTES = [
   ['rgba(167,243,252,0.8)', 'rgba(191,219,254,0.9)'],
@@ -22,8 +24,8 @@ const GEMINI_PALETTES = [
 
 function AuraFog() {
   const colorIndex = useRef(0);
-  const fadeOut = useRef(new Animated.Value(1)).current;
-  const fadeIn = useRef(new Animated.Value(0)).current;
+  const [fadeOut] = useState(() => new Animated.Value(1));
+  const [fadeIn] = useState(() => new Animated.Value(0));
   const [colors, setColors] = React.useState({
     current: GEMINI_PALETTES[0],
     next: GEMINI_PALETTES[1],
@@ -121,7 +123,7 @@ export default function LoginScreen() {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       if (id_token) {
-        setLoading(true);
+        setTimeout(() => setLoading(true), 0);
         supabase.auth.signInWithIdToken({ provider: 'google', token: id_token })
           .then(({ error }) => {
             if (error) Alert.alert('Google Login Error', error.message);
@@ -141,6 +143,9 @@ export default function LoginScreen() {
         
       if (data?.role === 'caregiver' || data?.role === 'staff' || data?.role === 'admin' || data?.role === 'superadmin') {
         navigation.replace('CaregiverApp');
+      } else if (data?.role === 'resident') {
+        const done = await AsyncStorage.getItem(onboardingKey(userId));
+        navigation.replace(done ? 'ResidentHome' : 'ResidentOnboarding');
       } else {
         navigation.replace('FamilyApp');
       }
@@ -237,6 +242,17 @@ export default function LoginScreen() {
         </View>
         <Feather name="chevron-right" size={20} color="#cbd5e1" />
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.roleCard} onPress={() => setMode('resident')}>
+        <View style={[styles.roleIconBox, { backgroundColor: '#ecfdf5' }]}>
+          <Feather name="user" size={28} color="#10b981" />
+        </View>
+        <View style={styles.roleTextWrap}>
+          <Text style={styles.roleTitle}>Resident</Text>
+          <Text style={styles.roleDesc}>Your daily summary</Text>
+        </View>
+        <Feather name="chevron-right" size={20} color="#cbd5e1" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -284,25 +300,29 @@ export default function LoginScreen() {
     </View>
   );
 
-  const renderFamilyMode = () => (
+  const renderEmailMode = (isResident: boolean) => (
     <View style={styles.formContainer}>
       <TouchableOpacity style={styles.backBtnSmall} onPress={() => setMode('select')}>
         <Feather name="arrow-left" size={20} color="#64748b" />
         <Text style={styles.backBtnText}>Back</Text>
       </TouchableOpacity>
 
-      <Text style={styles.titleSmall}>Family Portal</Text>
+      <Text style={styles.titleSmall}>{isResident ? 'Resident' : 'Family Portal'}</Text>
 
-      <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()} disabled={loading}>
-        <Image source={require('../../../assets/google-icon.png')} style={styles.googleIcon} />
-        <Text style={styles.googleButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+      {!isResident && (
+        <>
+          <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()} disabled={loading}>
+            <Image source={require('../../../assets/google-icon.png')} style={styles.googleIcon} />
+            <Text style={styles.googleButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
 
-      <View style={styles.dividerWrap}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>OR EMAIL</Text>
-        <View style={styles.dividerLine} />
-      </View>
+          <View style={styles.dividerWrap}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR EMAIL</Text>
+            <View style={styles.dividerLine} />
+          </View>
+        </>
+      )}
 
       <View style={styles.inputWrap}>
         <Feather name="mail" size={20} color="#94a3b8" />
@@ -332,7 +352,8 @@ export default function LoginScreen() {
 
         {mode === 'select' && renderSelectMode()}
         {mode === 'caregiver' && renderCaregiverMode()}
-        {mode === 'family' && renderFamilyMode()}
+        {mode === 'family' && renderEmailMode(false)}
+        {mode === 'resident' && renderEmailMode(true)}
 
       </KeyboardAvoidingView>
     </View>
@@ -357,13 +378,13 @@ const styles = StyleSheet.create({
   roleIconBox: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
   roleTextWrap: { flex: 1 },
   roleTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  roleDesc: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  roleDesc: { fontSize: 15, color: '#64748b', marginTop: 2 },
 
   // Caregiver Mode
   caregiverContainer: { backgroundColor: 'rgba(255,255,255,0.95)', padding: 24, borderRadius: 32, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', marginTop: -40 },
   backBtn: { alignSelf: 'flex-start', padding: 8, marginLeft: -8, marginBottom: 16 },
   caregiverTitle: { fontSize: 24, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
-  caregiverSubtitle: { fontSize: 14, color: '#64748b', marginBottom: 32 },
+  caregiverSubtitle: { fontSize: 15, color: '#64748b', marginBottom: 32 },
   
   dotsContainer: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 32 },
   dotBox: { width: 56, height: 64, borderRadius: 16, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' },
@@ -382,15 +403,15 @@ const styles = StyleSheet.create({
 
   // Family Mode
   backBtnSmall: { flexDirection: 'row', alignItems: 'center' },
-  backBtnText: { marginLeft: 4, fontSize: 14, color: '#64748b', fontWeight: '600' },
+  backBtnText: { marginLeft: 4, fontSize: 15, color: '#64748b', fontWeight: '600' },
   googleButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   googleIcon: { width: 20, height: 20, marginRight: 12 },
   googleButtonText: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
   dividerWrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#e2e8f0' },
-  dividerText: { paddingHorizontal: 12, fontSize: 12, fontWeight: '700', color: '#94a3b8' },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 16, marginBottom: 12, height: 50 },
+  dividerText: { paddingHorizontal: 12, fontSize: 15, fontWeight: '700', color: '#94a3b8' },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 16, marginBottom: 12, height: 52 },
   input: { flex: 1, marginLeft: 12, fontSize: 15, color: '#0f172a' },
-  loginBtn: { backgroundColor: '#0f172a', borderRadius: 12, height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  loginBtn: { backgroundColor: '#0f172a', borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

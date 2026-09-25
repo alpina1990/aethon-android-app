@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadow } from '../../constants/theme';
+import { SignOutButton } from '../../components/SignOutButton';
 
 const MOCK_VITALS = [
   { day: 'Mon', mood: 4, sleep: 7, pain: 1 },
@@ -44,8 +45,11 @@ export default function VitalsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={{ paddingTop: insets.top + Spacing.lg }}>
-        <Text style={styles.title}>Health & Wellness</Text>
-        <Text style={styles.subtitle}>Martha's 7-day trends and medication schedule</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={styles.title}>Health & Wellness</Text>
+          <SignOutButton />
+        </View>
+        <Text style={styles.subtitle}>Martha&apos;s 7-day trends and medication schedule</Text>
       </View>
 
       {/* Weekly Vitals */}
@@ -69,7 +73,7 @@ export default function VitalsScreen() {
       </View>
 
       {/* Medications */}
-      <Text style={styles.sectionTitle}>Today's Medications</Text>
+      <Text style={styles.sectionTitle}>Today&apos;s Medications</Text>
       {MEDS.map((med, i) => (
         <View key={i} style={styles.medRow}>
           <View style={[styles.medDot, { backgroundColor: med.status === 'taken' ? Colors.success : Colors.warning }]} />
@@ -84,11 +88,13 @@ export default function VitalsScreen() {
           </View>
         </View>
       ))}
+      <Text style={styles.referenceNote}>Reference only. Not a medication administration record.</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  referenceNote: { fontSize: 15, color: '#94a3b8', fontStyle: 'italic', marginTop: 12 },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { supabase } from '../../lib/supabase';
+import { SignOutButton } from '../../components/SignOutButton';
+import { LoadingView } from '../../components/LoadingView';
+import { ErrorView } from '../../components/ErrorView';
 import { useShift } from '../../context/ShiftContext';
 import type { Resident, Escalation } from '../../types/database';
 
@@ -19,7 +22,7 @@ function Badge({ label, variant }: { label: string; variant: 'high' | 'medium' |
   return (
     <View style={[{ backgroundColor: color.bg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6 }]}>
       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color.dot }} />
-      <Text style={{ color: color.text, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>{label}</Text>
+      <Text style={{ color: color.text, fontSize: 15, fontWeight: '700', textTransform: 'uppercase' }}>{label}</Text>
     </View>
   );
 }
@@ -32,16 +35,13 @@ export default function CaregiverHomeScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [escalations, setEscalations] = useState<Escalation[]>([]);
+  const [notesToCheckCount, setNotesToCheckCount] = useState(0);
+  const [awaitingOutcomeCount, setAwaitingOutcomeCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [pinnedResidentIds])
-  );
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // 1. Fetch Profile
       const { data: { user } } = await supabase.auth.getUser();
@@ -60,16 +60,44 @@ export default function CaregiverHomeScreen() {
       if (pinnedResidentIds.length > 0) escalationsQuery = escalationsQuery.in('resident_id', pinnedResidentIds);
       else escalationsQuery = escalationsQuery.limit(3);
 
-      const [residentsRes, escalationsRes] = await Promise.all([residentsQuery, escalationsQuery]);
-      
+      // 4. Count notes needing review
+      const notesToCheckQuery = supabase
+        .from('visit_notes')
+        .select('id', { count: 'exact', head: true })
+        .eq('transcription_status', 'complete')
+        .is('reviewed_at', null);
+
+      const awaitingQuery = supabase
+        .from('visit_notes')
+        .select('id', { count: 'exact', head: true })
+        .eq('physician_flagged', true)
+        .is('flag_outcome', null);
+
+      const [residentsRes, escalationsRes, notesToCheckRes, awaitingRes] = await Promise.all([
+        residentsQuery,
+        escalationsQuery,
+        notesToCheckQuery,
+        awaitingQuery,
+      ]);
+
+      if (residentsRes.error || escalationsRes.error) throw new Error('load failed');
+      setError(false);
       if (residentsRes.data) setResidents(residentsRes.data as Resident[]);
       if (escalationsRes.data) setEscalations(escalationsRes.data as Escalation[]);
-    } catch (error) {
-      console.error(error);
+      setNotesToCheckCount(notesToCheckRes.count ?? 0);
+      setAwaitingOutcomeCount(awaitingRes.count ?? 0);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pinnedResidentIds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   const handleResolve = async (id: string) => {
     // Optimistic UI update
@@ -81,8 +109,22 @@ export default function CaregiverHomeScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator size="large" color="#7c3aed" />
+      <View style={styles.container}>
+        <LoadingView message="Loading your shift" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ErrorView
+          message="Could not load your shift"
+          onRetry={() => {
+            setLoading(true);
+            fetchData();
+          }}
+        />
       </View>
     );
   }
@@ -111,13 +153,29 @@ export default function CaregiverHomeScreen() {
             <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase()}</Text>
             <Text style={styles.greetingText}>{profile?.full_name ? `${profile.full_name.split(' ')[0]}'s Shift` : 'My Shift'}</Text>
             <Text style={styles.subtitle}>{residents.length} residents assigned • {escalations.length} alerts</Text>
+            {awaitingOutcomeCount > 0 && (
+              <TouchableOpacity onPress={() => navigation.navigate('AwaitingOutcome')}>
+                <Text style={styles.awaitingText}>{awaitingOutcomeCount} escalations awaiting outcome</Text>
+              </TouchableOpacity>
+            )}
+            {notesToCheckCount > 0 && (
+              <TouchableOpacity style={styles.notesToCheckPill} onPress={() => navigation.navigate('UnreviewedNotes')}>
+                <View style={styles.amberDot} />
+                <Text style={styles.notesToCheckText}>
+                  {notesToCheckCount} {notesToCheckCount === 1 ? 'note' : 'notes'} to check
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?img=32' }}
-              style={styles.profileImage}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity style={styles.profileButton}>
+              <Image 
+                source={{ uri: 'https://i.pravatar.cc/150?img=32' }}
+                style={styles.profileImage}
+              />
+            </TouchableOpacity>
+            <SignOutButton />
+          </View>
         </View>
 
         {/* Quick Actions */}
@@ -158,7 +216,7 @@ export default function CaregiverHomeScreen() {
             <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 16, borderWidth: 1, borderColor: '#f1f5f9' }}>
               <Feather name="check-circle" size={32} color="#10b981" style={{ marginBottom: 12 }} />
               <Text style={{ fontSize: 16, fontWeight: '600', color: '#0f172a' }}>All caught up!</Text>
-              <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>No open escalations.</Text>
+              <Text style={{ fontSize: 15, color: '#64748b', marginTop: 4 }}>No open escalations.</Text>
             </View>
           ) : (
             escalations.map(esc => {
@@ -249,7 +307,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '800',
     color: '#64748b',
     letterSpacing: 1.2,
@@ -267,6 +325,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#64748b',
     fontWeight: '500',
+  },
+  awaitingText: { fontSize: 15, color: '#64748b', marginTop: 8 },
+  notesToCheckPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 10,
+    gap: 6,
+  },
+  amberDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#f59e0b',
+  },
+  notesToCheckText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#92400e',
   },
   profileButton: {
     width: 48,
@@ -294,7 +375,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     marginTop: 8,
   },
@@ -317,7 +398,7 @@ const styles = StyleSheet.create({
   badgeCount: {
     backgroundColor: '#ef4444',
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '800',
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -353,12 +434,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   escRoom: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#64748b',
     fontWeight: '500',
   },
   escReason: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#334155',
     lineHeight: 20,
     marginBottom: 16,
@@ -373,7 +454,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resolveBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0f172a',
   },
@@ -405,7 +486,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   residentInitials: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#475569',
     letterSpacing: 0.5,
@@ -417,7 +498,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   residentMeta: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#64748b',
     fontWeight: '500',
   },
@@ -426,7 +507,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   residentTime: {
-    fontSize: 11,
+    fontSize: 15,
     color: '#94a3b8',
     fontWeight: '600',
   },

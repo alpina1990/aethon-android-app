@@ -38,7 +38,7 @@ export function FamilyTabNavigator() {
         tabBarHideOnKeyboard: true, // This fixes the chat layout on Android!
         tabBarLabelStyle: {
           fontWeight: '600',
-          fontSize: 11,
+          fontSize: 15,
         },
         tabBarStyle: {
           backgroundColor: '#ffffff',

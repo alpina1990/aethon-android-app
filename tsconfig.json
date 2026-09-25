@@ -1,6 +1,15 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // whisper.rn's package.json "exports" map has no root "." entry and
+    // lists the "react-native" condition (its raw, un-typed source file)
+    // before "types" in the same subpath, so TS's exports resolution
+    // picks the source file over its .d.ts. Point type-checking at the
+    // compiled declaration file directly; this only affects `tsc`, not
+    // Metro's own bundling/resolution.
+    "paths": {
+      "whisper.rn/index": ["./node_modules/whisper.rn/lib/typescript/index.d.ts"]
+    }
   }
 }

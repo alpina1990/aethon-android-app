@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { SignOutButton } from '../../components/SignOutButton';
 
 interface ChatMessage {
   id: string;
@@ -56,6 +57,7 @@ export default function MessagesScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Feather name="phone" size={20} color="#0f172a" />
           </TouchableOpacity>
+          <SignOutButton />
         </View>
       </View>
 
@@ -141,7 +143,7 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: 15,
   },
   headerName: {
     fontSize: 16,
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
   },
   headerStatus: {
-    fontSize: 12,
+    fontSize: 15,
     color: '#64748b',
     fontWeight: '600',
   },
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   bubbleTime: {
-    fontSize: 11,
+    fontSize: 15,
     color: '#94a3b8',
     marginTop: 6,
     alignSelf: 'flex-end',

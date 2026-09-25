@@ -1,7 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/RootNavigator';
+import { supabase } from '../../lib/supabase';
+import type { Goal } from '../../lib/goals';
 
 // Minimal Badge Component
 function Badge({ label, variant }: { label: string; variant: 'success' | 'warning' | 'info' }) {
@@ -13,13 +18,46 @@ function Badge({ label, variant }: { label: string; variant: 'success' | 'warnin
   const color = colors[variant];
   return (
     <View style={[{ backgroundColor: color.bg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' }]}>
-      <Text style={{ color: color.text, fontSize: 12, fontWeight: '700' }}>{label}</Text>
+      <Text style={{ color: color.text, fontSize: 15, fontWeight: '700' }}>{label}</Text>
     </View>
   );
 }
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const [goals, setGoals] = useState<Goal[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+        const { data: profile } = await supabase.from('user_profiles').select('resident_id').eq('id', userData.user.id).single();
+        if (!profile?.resident_id) return;
+        const { data: resident } = await supabase.from('residents').select('independence_goals').eq('id', profile.resident_id).single();
+        const visible = ((resident?.independence_goals ?? []) as Goal[]).filter(g => g.family_visible);
+        if (!cancelled) setGoals(visible);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error: any) {
+      Alert.alert('Logout Error', error.message);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -31,15 +69,20 @@ export default function HomeScreen() {
             <Text style={styles.dateText}>THURSDAY, SEP 21</Text>
             <Text style={styles.greetingText}>Hi, Sarah</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?img=47' }} // Professional placeholder avatar
-              style={styles.profileImage}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.profileButton}>
+              <Image
+                source={{ uri: 'https://i.pravatar.cc/150?img=47' }} // Professional placeholder avatar
+                style={styles.profileImage}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} hitSlop={8}>
+              <Feather name="log-out" size={20} color="#dc2626" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <Text style={styles.subtitle}>Here is Martha's daily health summary.</Text>
+        <Text style={styles.subtitle}>Here is Martha&apos;s daily health summary.</Text>
 
         {/* Crisp Minimal Vitals Strip */}
         <View style={styles.vitalsContainer}>
@@ -70,6 +113,14 @@ export default function HomeScreen() {
 
         {/* Activity Feed */}
         <View style={styles.feedContainer}>
+          {goals.length > 0 && (
+            <View style={styles.goalsCard}>
+              <Text style={styles.goalsHeading}>What matters to them</Text>
+              {goals.map((g, i) => (
+                <Text key={i} style={styles.goalsText}>{g.text}</Text>
+              ))}
+            </View>
+          )}
           <View style={styles.feedHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
             <TouchableOpacity>
@@ -109,6 +160,7 @@ export default function HomeScreen() {
               <Text style={styles.activityDesc}>
                 Afternoon supplements and scheduled medications taken on time.
               </Text>
+              <Text style={styles.referenceNote}>Reference only. Not a medication administration record.</Text>
               <View style={{ marginTop: 12 }}>
                 <Badge label="Compliant" variant="success" />
               </View>
@@ -134,6 +186,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  referenceNote: { fontSize: 15, color: '#94a3b8', fontStyle: 'italic', marginTop: 8 },
+  goalsCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#f59e0b' },
+  goalsHeading: { fontSize: 17, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
+  goalsText: { fontSize: 16, color: '#0f172a', marginBottom: 4 },
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
@@ -150,7 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: '800',
     color: '#64748b',
     letterSpacing: 1.2,
@@ -163,6 +219,11 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     letterSpacing: -0.5,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   profileButton: {
     width: 48,
     height: 48,
@@ -174,6 +235,16 @@ const styles = StyleSheet.create({
   profileImage: {
     width: '100%',
     height: '100%',
+  },
+  logoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subtitle: {
     paddingHorizontal: 24,
@@ -219,7 +290,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   vitalLabel: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
     color: '#94a3b8',
   },
@@ -239,7 +310,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   seeAllText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#2563eb',
   },
@@ -291,12 +362,12 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   activityTime: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
     color: '#94a3b8',
   },
   activityDesc: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#475569',
     lineHeight: 22,
   },
@@ -318,12 +389,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   providerInitials: {
-    fontSize: 10,
+    fontSize: 15,
     fontWeight: '800',
     color: '#2563eb',
   },
   providerName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: '#64748b',
   },
