@@ -16,7 +16,8 @@
       },
       "entitlements": {
         "com.apple.developer.kernel.increased-memory-limit": true
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
