@@ -1,11 +1,11 @@
-# Aethon Health — Android App (React Native / Expo)
+# Aethon Health — Mobile App for iOS and Android (React Native / Expo)
 
-A polished, production-grade Android companion app for the Aethon Health platform.
+The Aethon mobile app for iOS and Android, built from one Expo codebase.
 
 ## 📁 Project Structure
 
 ```
-aethon-android/
+aethon-app/
 ├── App.tsx                          # Root entry point with providers
 ├── app.json                        # Expo configuration
 ├── src/

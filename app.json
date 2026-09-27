@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "aethon-android",
-    "slug": "aethon-android",
+    "name": "Aethon",
+    "slug": "aethon-app",
     "scheme": "aethon",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.aethonandroid"
+      "bundleIdentifier": "com.alpinahealth.care"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +25,7 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
-      "package": "com.anonymous.aethonandroid"
+      "package": "com.alpinahealth.care"
     },
     "web": {
       "favicon": "./assets/favicon.png"

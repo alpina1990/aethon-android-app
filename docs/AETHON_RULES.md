@@ -1,7 +1,7 @@
 # Aethon product rules for this app
 
-This app is the Aethon mobile app for Android (and later iOS), built with
-Expo. The product specification is `docs/BUILD_GUIDE.txt`, a text copy of
+This app is the Aethon mobile app for iOS and Android, built with Expo
+from one codebase. The product specification is `docs/BUILD_GUIDE.txt`, a text copy of
 "Aethon Build Guide v1.0". The guide was written for a plain React Native
 iOS app, so adapt its instructions to this Expo project as described below.
 AGENTS.md covers how to work with Expo; this file covers what to build.
