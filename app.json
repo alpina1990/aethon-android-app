@@ -9,7 +9,14 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.alpinahealth.care"
+      "bundleIdentifier": "com.alpinahealth.care",
+      "appleTeamId": "3CB6N9QT92",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.kernel.increased-memory-limit": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -48,7 +55,8 @@
         }
       ],
       "expo-asset",
-      "expo-sharing"
+      "expo-sharing",
+      "./plugins/withSceneLifecycle"
     ]
   }
 }
